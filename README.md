@@ -350,3 +350,7 @@ npm run dev
 * Use Pinia for global state
 * Maintain consistent code formatting
 * Follow Git workflow strictly
+
+
+
+### Yemiker or alasfelagi ngr kale iyaworan update inaregewalen
