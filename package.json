@@ -1,0 +1,23 @@
+{
+  "name": "EventHub-Frontend",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "nuxt": "^4.4.2",
+    "vue": "^3.5.31",
+    "vue-router": "^5.0.4"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2"
+  }
+}
