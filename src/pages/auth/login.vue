@@ -80,7 +80,7 @@
 definePageMeta({ layout: false })
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../../stores/auth'
 
 declare const definePageMeta: (meta: { layout?: boolean; middleware?: string }) => void
 
