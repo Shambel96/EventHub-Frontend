@@ -1,11 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-// export default defineNuxtConfig({
-//   compatibilityDate: '2025-07-15',
-//   devtools: { enabled: true }
-// })
-
 export default defineNuxtConfig({
-  compatibilityDate: "2026-04-03",
+  compatibilityDate: "2024-04-03",
   srcDir: "src/",
   css: ["~/assets/css/tailwind.css"],
   modules: ["@pinia/nuxt"],
@@ -15,11 +10,10 @@ export default defineNuxtConfig({
       autoprefixer: {},
     },
   },
-    runtimeConfig: {
+  runtimeConfig: {
     public: {
-      // Points to your NestJS backend
-      apiBase: import.meta.env.API_BASE_URL || 'http://localhost:3001',
-    },
-  },
-  // optionally add more Nuxt/Tailwind config here
+      apiBaseURL: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3344',
+      testToken: process.env.NUXT_TEST_TOKEN || ''
+    }
+  }
 });
