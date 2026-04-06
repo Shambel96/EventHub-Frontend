@@ -1,20 +1,34 @@
+import { useAuthStore } from '../stores/authStore';
+
 export const useApi = () => {
   const config = useRuntimeConfig();
+  const authStore = useAuthStore();
 
-  // Static token as per the plan for testing API endpoints
-  const token = 'YOUR_STATIC_TOKEN_HERE';
-  const baseURL = (config.public.apiBase as string) || 'https://api.example.com/v1';
+  const baseURL = (config.public.apiBaseURL as string) || 'http://localhost:3344';
 
   const $authFetch = async <T>(request: string, options: any = {}) => {
     return $fetch<T>(request, {
       baseURL,
       ...options,
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: authStore.token ? `Bearer ${authStore.token}` : '',
         ...options.headers,
       },
+      onResponseError({ response }) {
+        if (response.status === 401) {
+          console.error('Unauthorized access - potential token expiration');
+          // authStore.logout(); // Optional: auto-logout on 401
+        }
+      }
     });
   };
 
-  return { $authFetch };
+  const $fetchNoAuth = async <T>(request: string, options: any = {}) => {
+    return $fetch<T>(request, {
+      baseURL,
+      ...options,
+    });
+  };
+
+  return { $authFetch, $fetchNoAuth };
 };
