@@ -118,7 +118,7 @@
 import { onMounted, onUnmounted } from 'vue';
 import { useEventsStore } from '../../stores/eventsStore';
 import { useUsersStore } from '../../stores/usersStore';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../stores/auth';
 
 definePageMeta({
   layout: 'admin'
