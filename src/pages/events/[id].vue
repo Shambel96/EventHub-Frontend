@@ -50,7 +50,7 @@
           <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div v-for="amenity in event.amenities" :key="amenity.amenityId" class="flex items-center gap-3 bg-gray-50/80 p-3.5 rounded-xl border border-gray-100 hover:border-brand-blue/30 transition shadow-sm">
                <svg class="w-5 h-5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-               <span class="text-gray-700 font-semibold text-sm">{{ amenitiesStore.getAmenityName(amenity.amenityId) }}</span>
+               <span class="text-gray-700 font-semibold text-sm">{{ getAmenityLabel(amenity) }}</span>
             </div>
           </div>
         </section>
@@ -187,7 +187,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useEventsStore } from '../../stores/eventsStore';
 import { useAmenitiesStore } from '../../stores/amenitiesStore';
-import type { Event } from '../../types/event';
+import type { Event, EventAmenity } from '../../types/event';
 import { getEventCategoryLabel } from '../../utils/categoryFormatter';
 
 const route = useRoute();
@@ -197,6 +197,9 @@ const amenitiesStore = useAmenitiesStore();
 const eventId = route.params.id as string;
 const event = computed(() => eventsStore.getEventById(eventId) as Event | null);
 const categoryLabel = computed(() => getEventCategoryLabel(event.value));
+const getAmenityLabel = (amenity: EventAmenity) => {
+  return amenity.amenity?.name || amenitiesStore.getAmenityName(amenity.amenityId);
+};
 
 // Images except the first one (gallery)
 const galleryImages = computed(() => {
