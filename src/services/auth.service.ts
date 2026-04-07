@@ -1,9 +1,11 @@
 // services/auth.service.ts
 
-const BASE_URL = 'http://localhost:3000'
-
 async function post<T>(url: string, body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${BASE_URL}${url}`, {
+  // Use runtime config for API base URL
+  const config = useRuntimeConfig();
+  const baseURL = (config.public.apiBaseURL as string) || 'http://localhost:3344';
+
+  const res = await fetch(`${baseURL}${url}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
