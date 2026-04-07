@@ -51,7 +51,7 @@
       </AuthInput>
 
       <div class="flex justify-end -mt-1">
-        <NuxtLink to="/forgot-password" class="text-xs text-white/40 hover:text-white/70 transition-colors">
+        <NuxtLink to="/auth/forgot-password" class="text-xs text-white/40 hover:text-white/70 transition-colors">
           Forgot password?
         </NuxtLink>
       </div>
@@ -69,7 +69,7 @@
 
     <p class="text-center text-sm text-white/40">
       Don't have an account?
-      <NuxtLink to="/register" class="text-white font-semibold hover:text-white/80 transition-colors ml-1">
+      <NuxtLink to="/auth/register" class="text-white font-semibold hover:text-white/80 transition-colors ml-1">
         Create one
       </NuxtLink>
     </p>
@@ -121,7 +121,7 @@ async function handleSubmit() {
   isLoading.value = true
   try {
     await authStore.login(form.email, form.password)
-    router.push('/')
+    router.replace('/')
   } catch (err: any) {
     authError.value = err?.message ?? 'Something went wrong. Please try again.'
   } finally {

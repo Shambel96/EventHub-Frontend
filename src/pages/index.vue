@@ -7,6 +7,9 @@
         Get Started
       </button>
     </div>
+    <button @click="handleLogout" class="text-red-400 hover:text-red-300">
+  Logout
+</button>
   </div>
 </template>
 
@@ -18,4 +21,29 @@ useHead({
     { name: 'description', content: 'EventHub is a modern platform to manage your events seamlessly.' }
   ]
 })
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+const handleLogout = async () => {
+  try {
+    await $fetch('http://localhost:3000/auth/logout', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${authStore.token}`
+      }
+    });
+  } catch (err) {
+    console.log('Backend logout failed, but we will clear token anyway');
+  }
+
+  authStore.logout();        
+  // OR manually:
+  // localStorage.removeItem('token');
+  // authStore.user = null;
+  // authStore.token = null;
+
+  router.push('/auth/login');
+};
+
 </script>
