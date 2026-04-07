@@ -17,7 +17,7 @@ export const useApi = () => {
       onResponseError({ response }) {
         if (response.status === 401) {
           console.error('Unauthorized access - potential token expiration');
-          // authStore.logout(); // Optional: auto-logout on 401
+          authStore.logout();
         }
       }
     });
