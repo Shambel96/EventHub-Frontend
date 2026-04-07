@@ -48,9 +48,6 @@
           <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
         </NuxtLink>
       </div>
-    <button @click="handleLogout" class="text-red-400 hover:text-red-300">
-  Logout
-</button>
     </section>
 
   </div>
@@ -74,29 +71,5 @@ useHead({
     { name: 'description', content: 'EventHub is a modern platform to discover and manage events seamlessly powered by Vanta API.' }
   ]
 })
-
-const router = useRouter();
-const authStore = useAuthStore();
-
-const handleLogout = async () => {
-  try {
-    await $fetch('http://localhost:3000/auth/logout', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${authStore.token}`
-      }
-    });
-  } catch (err) {
-    console.log('Backend logout failed, but we will clear token anyway');
-  }
-
-  authStore.logout();        
-  // OR manually:
-  // localStorage.removeItem('token');
-  // authStore.user = null;
-  // authStore.token = null;
-
-  router.push('/auth/login');
-};
 
 </script>

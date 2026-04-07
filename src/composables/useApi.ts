@@ -4,7 +4,7 @@ export const useApi = () => {
   const config = useRuntimeConfig();
   const authStore = useAuthStore();
 
-  const baseURL = (config.public.apiBaseURL as string) || 'http://localhost:3344';
+  const baseURL = 'http://localhost:3000';
 
   const $authFetch = async <T>(request: string, options: any = {}) => {
     return $fetch<T>(request, {

@@ -15,7 +15,8 @@ export const useEventsStore = defineStore('events', () => {
     isLoading.value = true;
     error.value = null;
     try {
-      const response = await $authFetch<any>('/events');
+            const response = await $fetchNoAuth<any>('/events');
+
       console.log('Events API Response:', response);
       
       const eventsList = Array.isArray(response) ? response : (response.data || response.events || []);

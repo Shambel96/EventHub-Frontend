@@ -153,7 +153,7 @@ const form = reactive<{
   password: string
   confirmPassword: string
 }>({
-  name: '',
+  name: '', 
   email: '',
   password: '',
   confirmPassword: '',

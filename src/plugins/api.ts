@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth'
 
 export default defineNuxtPlugin(() => {
   const config  = useRuntimeConfig()
-  const baseURL = config.public.apiBase as string
+  const baseURL = config.public.apiBase as string || 'http://localhost:3000'
 
   async function $api<T = unknown>(
     path: string,

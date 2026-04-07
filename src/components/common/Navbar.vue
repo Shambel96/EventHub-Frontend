@@ -71,10 +71,10 @@
             </div>
           </template>
           <template v-else>
-            <NuxtLink to="/login" class="text-sm font-bold text-gray-600 hover:text-brand-blue px-4 py-2 transition-colors">
+            <NuxtLink to="/auth/login" class="text-sm font-bold text-gray-600 hover:text-brand-blue px-4 py-2 transition-colors">
               Login
             </NuxtLink>
-            <NuxtLink to="/register" class="bg-brand-blue text-white hover:bg-white hover:text-brand-blue border border-brand-blue px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
+            <NuxtLink to="/auth/register" class="bg-brand-blue text-white hover:bg-white hover:text-brand-blue border border-brand-blue px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
               Sign Up
             </NuxtLink>
           </template>
@@ -136,10 +136,10 @@
             </button>
           </div>
           <div v-else class="flex flex-col gap-3 p-4">
-            <NuxtLink to="/login" @click="isMobileMenuOpen = false" class="text-center py-3 font-bold text-gray-600 border border-gray-200 rounded-xl">
+            <NuxtLink to="/auth/login" @click="isMobileMenuOpen = false" class="text-center py-3 font-bold text-gray-600 border border-gray-200 rounded-xl">
               Login
             </NuxtLink>
-            <NuxtLink to="/register" @click="isMobileMenuOpen = false" class="text-center py-3 font-bold text-white bg-brand-blue rounded-xl shadow-lg">
+            <NuxtLink to="/auth/register" @click="isMobileMenuOpen = false" class="text-center py-3 font-bold text-white bg-brand-blue rounded-xl shadow-lg">
               Sign Up
             </NuxtLink>
           </div>
@@ -177,9 +177,24 @@ const handleScroll = () => {
 };
 
 const handleLogout = async () => {
-  isMobileMenuOpen.value = false;
-  authStore.logout();
-  await router.push('/');
+  try {
+    await $fetch('http://localhost:3000/auth/logout', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${authStore.token}`
+      }
+    });
+  } catch (err) {
+    console.log('Backend logout failed, but we will clear token anyway');
+  }
+
+  authStore.logout();        
+  // OR manually:
+  // localStorage.removeItem('token');
+  // authStore.user = null;
+  // authStore.token = null;
+
+  router.push('/');
 };
 
 onMounted(() => {

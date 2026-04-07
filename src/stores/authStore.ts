@@ -22,7 +22,62 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.removeItem('auth_token');
     }
   };
+  const login = async (email: string, password: string) => {
+  isLoading.value = true;
+  error.value = null;
 
+  try {
+    const response = await $fetch<{
+      access_token: string;
+      user: User;
+    }>('/auth/login', {
+      baseURL: 'http://localhost:3000',
+      method: 'POST',
+      body: { email, password },
+    });
+
+    setToken(response.access_token);
+    user.value = response.user;
+    persistUser();
+
+  } catch (err: any) {
+    error.value =
+      err?.data?.message ||
+      err?.message ||
+      'Login failed';
+    throw err;
+  } finally {
+    isLoading.value = false;
+  }
+};
+const register = async (name: string, email: string, password: string) => {
+  isLoading.value = true;
+  error.value = null;
+
+  try {
+    const response = await $fetch<{
+      access_token: string;
+      user: User;
+    }>('/auth/signup', {
+      baseURL: 'http://localhost:3000',
+      method: 'POST',
+      body: { name, email, password },
+    });
+
+    setToken(response.access_token);
+    user.value = response.user;
+    persistUser();
+
+  } catch (err: any) {
+    error.value =
+      err?.data?.message ||
+      err?.message ||
+      'Registration failed';
+    throw err;
+  } finally {
+    isLoading.value = false;
+  }
+};
   const hydrate = () => {
     if (import.meta.client) {
       const storedToken = localStorage.getItem('auth_token');
@@ -60,7 +115,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const response = await $fetch<User>('/users/me', {
-        baseURL: (config.public.apiBaseURL as string) || 'http://localhost:3344',
+        baseURL: (config.public.apiBaseURL as string) || 'http://localhost:3000',
         headers: {
           Authorization: `Bearer ${token.value}`
         }
@@ -95,6 +150,8 @@ export const useAuthStore = defineStore('auth', () => {
     setToken,
     hydrate,
     fetchProfile,
+    login,
+    register,
     logout
   };
 });
