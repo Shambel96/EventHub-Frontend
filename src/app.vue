@@ -6,7 +6,10 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useAuthStore } from './stores/authStore'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from './stores/auth'
+
+const router = useRouter()
 
 onMounted(async () => {
   // Safe hydration after Pinia and App are fully mounted in the browser
@@ -15,7 +18,11 @@ onMounted(async () => {
   authStore.hydrate()
   
   if (authStore.isAuthenticated) {
-    await authStore.fetchProfile()
+    const profile = await authStore.fetchProfile()
+
+    if (!profile) {
+      await router.replace('/auth/login')
+    }
   }
 })
 </script>
