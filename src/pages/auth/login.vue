@@ -1,5 +1,5 @@
 <template>
-  <AuthCard>
+  <AuthCard medium>
     <div class="mb-7">
       <h1 class="text-2xl font-bold text-white tracking-tight">Welcome back</h1>
       <p class="text-sm text-white/50 mt-1">Sign in to your account to continue</p>
@@ -69,7 +69,7 @@
 
     <p class="text-center text-sm text-white/40">
       Don't have an account?
-      <NuxtLink to="/register" class="text-white font-semibold hover:text-white/80 transition-colors ml-1">
+      <NuxtLink to="/auth/register" class="text-white font-semibold hover:text-white/80 transition-colors ml-1">
         Create one
       </NuxtLink>
     </p>
@@ -77,14 +77,15 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: false })
+definePageMeta({ layout: false, middleware: 'guest' })
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 
 declare const definePageMeta: (meta: { layout?: boolean; middleware?: string }) => void
 
 const router    = useRouter()
+const route     = useRoute()
 const authStore = useAuthStore()
 
 const form   = reactive({ email: '', password: '' })
@@ -121,6 +122,23 @@ async function handleSubmit() {
   isLoading.value = true
   try {
     await authStore.login(form.email, form.password)
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null
+
+    if (redirect) {
+      router.push(redirect)
+      return
+    }
+
+    if (authStore.user?.role === 'ADMIN') {
+      router.push('/admin')
+      return
+    }
+
+    if (authStore.user?.role === 'OWNER') {
+      router.push('/owner')
+      return
+    }
+
     router.push('/')
   } catch (err: any) {
     authError.value = err?.message ?? 'Something went wrong. Please try again.'

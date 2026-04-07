@@ -38,7 +38,7 @@
     </form>
     
     <div class="mt-8 text-center">
-      <NuxtLink to="/login" class="text-sm text-gray-400 hover:text-white transition-colors">
+      <NuxtLink to="/auth/login" class="text-sm text-gray-400 hover:text-white transition-colors">
         Back to Login
       </NuxtLink>
     </div>

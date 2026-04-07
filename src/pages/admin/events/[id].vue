@@ -101,7 +101,7 @@
                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                  </div>
                  <div>
-                   <p class="text-xs font-black text-brand-blue">{{ formatDate(event.beginDate) }}</p>
+                   <p class="text-xs font-black text-brand-blue">{{ formatDate(event.startDate) }}</p>
                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Start Date</p>
                  </div>
                </div>
@@ -146,7 +146,7 @@
                 <p class="text-[8px] font-black uppercase tracking-widest opacity-40">Total Likes</p>
               </div>
               <div>
-                <p class="text-3xl font-black">{{ event.rating }}</p>
+                <p class="text-3xl font-black">{{ event.avgRating }}</p>
                 <p class="text-[8px] font-black uppercase tracking-widest opacity-40">Avg Rating</p>
               </div>
             </div>
@@ -198,7 +198,10 @@ const router = useRouter();
 const eventsStore = useEventsStore();
 const amenitiesStore = useAmenitiesStore();
 
-const event = computed(() => eventsStore.events.find(e => e.id === route.params.id) || null);
+const event = computed(() => {
+  const routeId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id;
+  return eventsStore.events.find(e => String(e.id) === String(routeId)) || null;
+});
 
 const showDeleteModal = ref(false);
 const isEditModalOpen = ref(false);
@@ -208,6 +211,7 @@ const triggerDelete = () => {
 };
 
 const onConfirmDelete = async () => {
+  if (!event.value) return;
   await eventsStore.deleteEvent(event.value.id);
   router.push('/admin/events');
 };

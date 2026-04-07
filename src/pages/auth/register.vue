@@ -1,5 +1,5 @@
 <template>
-  <AuthCard>
+  <AuthCard wide>
     <div class="mb-7">
       <h1 class="text-2xl font-bold text-white tracking-tight">Create account</h1>
       <p class="text-sm text-white/50 mt-1">Join EventHub and start discovering</p>
@@ -126,7 +126,7 @@
 
     <p class="text-center text-sm text-white/40">
       Already have an account?
-      <NuxtLink to="/login" class="text-white font-semibold hover:text-white/80 transition-colors ml-1">
+      <NuxtLink to="/auth/login" class="text-white font-semibold hover:text-white/80 transition-colors ml-1">
         Sign in
       </NuxtLink>
     </p>
@@ -134,18 +134,13 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, reactive, ref, computed } from 'vue'
+definePageMeta({ layout: false, middleware: 'guest' })
+import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 
 const router    = useRouter()
 const authStore = useAuthStore()
-
-onBeforeMount(() => {
-  if (authStore.user) {
-    router.replace('/')
-  }
-})
 
 const form = reactive({ name: '', email: '', password: '', confirmPassword: '' })
 const errors = reactive({ name: '', email: '', password: '', confirmPassword: '' })
@@ -216,7 +211,7 @@ async function handleSubmit() {
   isLoading.value = true
   try {
     await authStore.register(form.name, form.email, form.password)
-    router.push('/')
+    router.push('/auth/login')
   } catch (err: any) {
     authError.value = err?.message ?? 'Something went wrong. Please try again.'
   } finally {
