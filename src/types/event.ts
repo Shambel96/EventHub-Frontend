@@ -46,6 +46,7 @@ export interface Event {
   price: number | null;
   isPaid: boolean;
   images: EventImage[];
+  featuredImage?: string;
   categoryId: string;
   category?: EventCategory;
   location: string;
