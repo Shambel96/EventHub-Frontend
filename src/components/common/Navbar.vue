@@ -48,15 +48,15 @@
               
               <!-- Dropdown -->
               <div class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform scale-95 group-hover:scale-100 origin-top-right">
-                <NuxtLink 
-                  v-if="authStore.isAdmin || authStore.isOwner"
-                  to="/admin" 
+                <NuxtLink
+                  v-if="dashboardLink"
+                  :to="dashboardLink.path"
                   class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-brand-blue font-medium"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                  Admin Dashboard
+                  {{ dashboardLink?.label }}
                 </NuxtLink>
-                <NuxtLink to="/admin/profile" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-brand-blue font-medium">
+                <NuxtLink :to="profileLink" class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-brand-blue font-medium">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                   My Profile
                 </NuxtLink>
@@ -71,10 +71,10 @@
             </div>
           </template>
           <template v-else>
-            <NuxtLink to="/login" class="text-sm font-bold text-gray-600 hover:text-brand-blue px-4 py-2 transition-colors">
+            <NuxtLink to="/auth/login" class="text-sm font-bold text-gray-600 hover:text-brand-blue px-4 py-2 transition-colors">
               Login
             </NuxtLink>
-            <NuxtLink to="/register" class="bg-brand-blue text-white hover:bg-white hover:text-brand-blue border border-brand-blue px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
+            <NuxtLink to="/auth/register" class="bg-brand-blue text-white hover:bg-white hover:text-brand-blue border border-brand-blue px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
               Sign Up
             </NuxtLink>
           </template>
@@ -120,15 +120,15 @@
                 <p class="text-xs text-gray-500">{{ authStore.user?.email }}</p>
               </div>
             </div>
-            <NuxtLink 
-               v-if="authStore.isAdmin || authStore.isOwner"
-               to="/admin" 
+            <NuxtLink
+               v-if="dashboardLink"
+               :to="dashboardLink.path"
                @click="isMobileMenuOpen = false"
                class="block px-4 py-3 rounded-xl text-base font-bold text-gray-600 hover:bg-gray-50"
             >
-              Admin Dashboard
+              {{ dashboardLink?.label }}
             </NuxtLink>
-            <NuxtLink to="/admin/profile" @click="isMobileMenuOpen = false" class="block px-4 py-3 rounded-xl text-base font-bold text-gray-600 hover:bg-gray-50">
+            <NuxtLink :to="profileLink" @click="isMobileMenuOpen = false" class="block px-4 py-3 rounded-xl text-base font-bold text-gray-600 hover:bg-gray-50">
               My Profile
             </NuxtLink>
             <button @click="handleLogout" class="w-full text-left px-4 py-3 rounded-xl text-base font-bold text-red-600 hover:bg-red-50">
@@ -136,10 +136,10 @@
             </button>
           </div>
           <div v-else class="flex flex-col gap-3 p-4">
-            <NuxtLink to="/login" @click="isMobileMenuOpen = false" class="text-center py-3 font-bold text-gray-600 border border-gray-200 rounded-xl">
+            <NuxtLink to="/auth/login" @click="isMobileMenuOpen = false" class="text-center py-3 font-bold text-gray-600 border border-gray-200 rounded-xl">
               Login
             </NuxtLink>
-            <NuxtLink to="/register" @click="isMobileMenuOpen = false" class="text-center py-3 font-bold text-white bg-brand-blue rounded-xl shadow-lg">
+            <NuxtLink to="/auth/register" @click="isMobileMenuOpen = false" class="text-center py-3 font-bold text-white bg-brand-blue rounded-xl shadow-lg">
               Sign Up
             </NuxtLink>
           </div>
@@ -150,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -160,6 +160,24 @@ const router = useRouter();
 
 const isScrolled = ref(false);
 const isMobileMenuOpen = ref(false);
+
+const dashboardLink = computed(() => {
+  if (authStore.isAdmin) {
+    return { path: '/admin', label: 'Admin Dashboard' };
+  }
+
+  if (authStore.isOwner) {
+    return { path: '/owner', label: 'Owner Dashboard' };
+  }
+
+  return null;
+});
+
+const profileLink = computed(() => {
+  if (authStore.isAdmin) return '/admin/profile';
+  if (authStore.isOwner) return '/owner/profile';
+  return '/profile';
+});
 
 const navLinks = [
   { name: 'Home', path: '/' },
