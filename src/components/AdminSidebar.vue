@@ -5,12 +5,12 @@
       <NuxtLink to="/admin/profile" class="flex flex-col items-center text-center group">
         <div class="relative mb-4">
           <div class="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white shadow-lg group-hover:scale-105 transition-transform duration-300">
-            <img src="https://i.pravatar.cc/150?u=admin" alt="Admin Avatar" class="w-full h-full object-cover" />
+            <img :src="displayAvatar" alt="Admin Avatar" class="w-full h-full object-cover" />
           </div>
           <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-white rounded-full"></div>
         </div>
-        <h3 class="text-xl font-extrabold text-brand-blue group-hover:text-teal-600 transition-colors">Alex Admin</h3>
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Platform Owner</p>
+        <h3 class="text-xl font-extrabold text-brand-blue group-hover:text-teal-600 transition-colors">{{ displayName }}</h3>
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{{ displayRoleLabel }}</p>
       </NuxtLink>
     </div>
 
@@ -54,7 +54,18 @@
 </template>
 
 <script setup>
-import { h } from 'vue';
+import { computed, h } from 'vue';
+import { useAuthStore } from '../stores/auth';
+
+const authStore = useAuthStore();
+
+const displayName = computed(() => authStore.user?.name || 'Admin User');
+const displayAvatar = computed(() => authStore.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.value)}&background=113672&color=ffffff&size=256`);
+const displayRoleLabel = computed(() => {
+  if (authStore.user?.role === 'OWNER') return 'Platform Owner';
+  if (authStore.user?.role === 'ADMIN') return 'Administrator';
+  return 'Team Member';
+});
 
 const DashboardIcon = () => h('svg', { fill: 'none', stroke: 'currentColor', 'stroke-width': '2', viewBox: '0 0 24 24' }, [h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', d: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z' })]);
 
