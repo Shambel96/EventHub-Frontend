@@ -353,4 +353,4 @@ npm run dev
 
 
 
-### Yemiker or alasfelagi ngr kale iyaworan update inaregewalen
+### Ezi wust Yemiker or alasfelagi ngr kale iyaworan update inaregewalen

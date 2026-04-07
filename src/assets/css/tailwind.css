@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Optional custom global styles */
-/* :root {
-  --my-color: #123456;
-} */
+@theme {
+  --color-brand-blue: #083765;
+  --color-brand-yellow: #fff100;
+}
