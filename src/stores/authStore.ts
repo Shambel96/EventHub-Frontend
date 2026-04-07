@@ -4,7 +4,7 @@ import type { User } from '../types/user';
 
 export const useAuthStore = defineStore('auth', () => {
   const config = useRuntimeConfig();
-  
+ 
   const token = ref<string | null>(null);
   const user = ref<User | null>(null);
   const isLoading = ref(false);

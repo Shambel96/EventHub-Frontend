@@ -1,207 +1,118 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
-import type { Event as AppEvent } from '../types/event';
-import { useApi } from '../composables/useApi';
-import { formatDuration, parseDuration } from '../utils/durationFormatter';
+// stores/eventsStore.ts
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
 
 export const useEventsStore = defineStore('events', () => {
-  const { $authFetch, $fetchNoAuth } = useApi();
-  const events = ref<AppEvent[]>([]);
-  const isLoading = ref<boolean>(false);
-  const error = ref<string | null>(null);
-  const totalCount = ref<number>(0);
+  type EventItem = Record<string, any>
+  type ApiResponse<T> = T | { data?: T }
 
+  const events = ref<EventItem[]>([])
+  const currentEvent = ref<EventItem | null>(null)
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+
+  // Fetch all events
   const fetchEvents = async () => {
-    isLoading.value = true;
-    error.value = null;
-    try {
-            const response = await $fetchNoAuth<any>('/events');
+    isLoading.value = true
+    error.value = null
 
-      console.log('Events API Response:', response);
-      
-      const eventsList = Array.isArray(response) ? response : (response.data || response.events || []);
-      events.value = eventsList.map((e: any) => ({
-        ...e,
-        categoryId: e.category?.id || e.categoryId || '',
-        category: e.category
-          ? {
-              id: e.category.id,
-              name: e.category.name,
-            }
-          : undefined,
-        duration: formatDuration(e.duration),
-        price: e.price !== null && e.price !== undefined ? parseFloat(e.price) : null,
-        // Normalize UI-only fields with safe defaults
-        avgRating: e.avgRating ?? e.rating ?? 0,
-        totalRatings: e.totalRatings ?? 0,
-        likesCount: e.likesCount ?? 0,
-        isLiked: e.isLiked ?? false,
-        commentsCount: e.commentsCount ?? 0,
-        isBookmarked: e.isBookmarked ?? false,
-      }));
+    try {
+      const response = await $fetch<ApiResponse<EventItem[]>>('http://localhost:3001/events')
+      events.value = Array.isArray(response) ? response : (response.data ?? [])
+
+      console.log('✅ Events loaded:', events.value.length, 'events')
     } catch (err: any) {
-      error.value = err.data?.message || err.message || 'Failed to fetch events';
-      console.error('Fetch Events Error:', err);
+      error.value = err.data?.message || 'Failed to fetch events'
+      console.error('Fetch events error:', err)
     } finally {
-      isLoading.value = false;
+      isLoading.value = false
     }
-  };
+  }
 
-  const fetchTotalCount = async () => {
-    try {
-      const data = await $authFetch<any>('/events/count');
-      totalCount.value = typeof data === 'number' ? data : (data.count || data.total || 0);
-    } catch (err) {
-      console.error('Failed to fetch count:', err);
-    }
-  };
+  // Fetch single event detail
+  const fetchEventById = async (id: string) => {
+    isLoading.value = true
+    error.value = null
+    currentEvent.value = null
 
-  const addEvent = async (payload: Partial<AppEvent>) => {
-    isLoading.value = true;
     try {
-      const apiPayload = {
-        ...payload,
-        duration: payload.duration ? parseDuration(payload.duration as string) : 0,
-      };
-      
-      const newEvent = await $authFetch<AppEvent>('/events', {
-        method: 'POST',
-        body: apiPayload
-      });
-      
-      events.value.unshift({
-        ...newEvent,
-        duration: formatDuration(newEvent.duration)
-      });
-      return newEvent;
+      const response = await $fetch<ApiResponse<EventItem | EventItem[]>>(`http://localhost:3001/events/${id}`)
+      currentEvent.value = Array.isArray(response) ? response[0] : (response.data ?? response)
+
+      console.log('✅ Event detail loaded:', currentEvent.value?.title)
     } catch (err: any) {
-      error.value = err.message || 'Failed to add event';
-      throw err;
+      error.value = err.data?.message || 'Failed to load event details'
+      console.error(`Error fetching event ${id}:`, err)
     } finally {
-      isLoading.value = false;
+      isLoading.value = false
     }
-  };
+  }
 
-  const updateEvent = async (id: string, payload: Partial<AppEvent>) => {
-    isLoading.value = true;
+  // Like / Unlike
+  const toggleLike = async (eventId: string) => {
     try {
-      const apiPayload = {
-        ...payload,
-        duration: payload.duration ? parseDuration(payload.duration as string) : undefined,
-      };
-      
-      const updated = await $authFetch<AppEvent>(`/events/${id}`, {
-        method: 'PATCH',
-        body: apiPayload
-      });
-      
-      const index = events.value.findIndex(e => e.id === id);
-      if (index !== -1) {
-        events.value[index] = {
-          ...updated,
-          duration: formatDuration(updated.duration)
-        };
+      await $fetch(`http://localhost:3001/events/${eventId}/like`, { method: 'POST' })
+      // Refresh current event to get updated count
+      if (currentEvent.value?.id === eventId) {
+        await fetchEventById(eventId)
       }
-    } catch (err: any) {
-      error.value = err.message || 'Failed to update event';
-      throw err;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const deleteEvent = async (id: string) => {
-    isLoading.value = true;
-    try {
-      await $authFetch(`/events/${id}`, { method: 'DELETE' });
-      events.value = events.value.filter(e => e.id !== id);
-    } catch (err: any) {
-      error.value = err.message || 'Failed to delete event';
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const setFeaturedImage = async (eventId: string, imageId: string) => {
-    try {
-      await $authFetch(`/events/${eventId}/images/${imageId}/featured`, { method: 'PATCH' });
-      // Refresh local data to show new featured image
-      await fetchEvents();
     } catch (err) {
-      console.error('Failed to set featured image:', err);
+      console.error('Toggle like failed:', err)
     }
-  };
+  }
 
-  const toggleLike = async (id: string) => {
-    const event = events.value.find(e => e.id === id);
-    if (event) {
-      event.isLiked = !event.isLiked;
-      event.likesCount += event.isLiked ? 1 : -1;
-      // try { await EventService.toggleLike(id); } catch(e) { /* revert */ }
+  // Bookmark / Unbookmark
+  const toggleBookmark = async (eventId: string) => {
+    try {
+      await $fetch(`http://localhost:3001/events/${eventId}/bookmark`, { method: 'POST' })
+      if (currentEvent.value?.id === eventId) {
+        await fetchEventById(eventId)
+      }
+    } catch (err) {
+      console.error('Toggle bookmark failed:', err)
     }
-  };
+  }
 
-  const toggleBookmark = async (id: string) => {
-    const event = events.value.find(e => e.id === id);
-    if (event) {
-      event.isBookmarked = !event.isBookmarked;
-      // try { await EventService.toggleBookmark(id); } catch(e) { /* revert */ }
+  // Rate event
+  const rateEvent = async (eventId: string, rating: number) => {
+    try {
+      await $fetch(`http://localhost:3001/events/${eventId}/rate`, {
+        method: 'POST',
+        body: { rating }
+      })
+      if (currentEvent.value?.id === eventId) {
+        await fetchEventById(eventId)
+      }
+    } catch (err) {
+      console.error('Rating failed:', err)
     }
-  };
+  }
 
-  const rateEvent = async (id: string, newRating: number) => {
-    const event = events.value.find(e => e.id === id);
-    if (event) {
-      // Optimistic rating update
-      event.avgRating = parseFloat(((event.avgRating + newRating) / 2).toFixed(1));
+  // Post comment
+  const postComment = async (eventId: string, content: string) => {
+    try {
+      await $fetch(`http://localhost:3001/events/${eventId}/comment`, {
+        method: 'POST',
+        body: { content }
+      })
+      if (currentEvent.value?.id === eventId) {
+        await fetchEventById(eventId)
+      }
+    } catch (err) {
+      console.error('Post comment failed:', err)
     }
-  };
-
-  const getEventById = computed(() => {
-    return (id: string) => events.value.find(e => e.id === id) || null;
-  });
-
-  const featuredEvents = computed(() => events.value.slice(0, 3));
-  const totalEvents = computed(() => events.value.length);
-  const totalCategories = computed(() => new Set(events.value.map(e => e.categoryId)).size);
-  const bookmarkedEvents = computed(() => events.value.filter(e => e.isBookmarked));
-
-  const ongoingEvents = computed(() => {
-    const now = new Date();
-    return events.value.filter(e => new Date(e.startDate) <= now && new Date(e.endDate) >= now);
-  });
-
-  const plannedEvents = computed(() => {
-    const now = new Date();
-    return events.value.filter(e => new Date(e.startDate) > now);
-  });
-
-  const passedEvents = computed(() => {
-    const now = new Date();
-    return events.value.filter(e => new Date(e.endDate) < now);
-  });
+  }
 
   return {
     events,
+    currentEvent,
     isLoading,
     error,
-    featuredEvents,
-    bookmarkedEvents,
-    getEventById,
-    totalEvents,
-    totalCount,
-    totalCategories,
-    ongoingEvents,
-    plannedEvents,
-    passedEvents,
     fetchEvents,
-    fetchTotalCount,
-    addEvent,
-    updateEvent,
-    deleteEvent,
-    setFeaturedImage,
+    fetchEventById,
     toggleLike,
     toggleBookmark,
-    rateEvent
-  };
-});
+    rateEvent,
+    postComment
+  }
+})
