@@ -12,8 +12,8 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBaseURL: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3344',
-      testToken: process.env.NUXT_TEST_TOKEN || ''
+      apiBase: 'http://localhost:3000',
+      testToken: ''
     }
   }
 });
