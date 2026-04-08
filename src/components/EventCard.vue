@@ -13,35 +13,34 @@
         <CalendarDays class="w-16 h-16 text-white/20" />
       </div>
 
-      <!-- Category badge -->
+      <!-- Category -->
       <div class="absolute top-4 left-4 bg-white/95 text-xs font-bold px-3 py-1 rounded-full shadow-sm text-brand-blue">
         {{ categoryLabel }}
       </div>
 
-      <!-- Price badge -->
-      <div class="absolute top-4 right-4 bg-white/95 text-xs font-bold px-3 py-1 rounded-full shadow-sm text-gray-700">
+      <!-- Price -->
+      <div class="absolute top-4 right-4 bg-white/95 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
         {{ event.isPaid && event.price ? `$${event.price}` : 'Free' }}
       </div>
     </div>
 
-    <!-- Body -->
     <div class="p-6">
       <h3 class="font-bold text-xl leading-tight mb-3 line-clamp-2 text-gray-900 group-hover:text-brand-blue transition-colors">
         {{ event.title }}
       </h3>
 
-      <p class="text-gray-600 text-sm line-clamp-3 mb-5 leading-relaxed">
+      <p class="text-gray-600 text-sm line-clamp-3 mb-6 leading-relaxed">
         {{ event.description }}
       </p>
 
       <!-- Meta -->
       <div class="flex items-center justify-between text-xs text-gray-500 mb-6">
         <div class="flex items-center gap-1.5">
-          <MapPin class="w-3.5 h-3.5 flex-shrink-0" />
-          <span class="truncate max-w-[140px]">{{ event.location || 'Online' }}</span>
+          <MapPin class="w-3.5 h-3.5" />
+          <span class="truncate">{{ event.location || 'Online' }}</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <Clock class="w-3.5 h-3.5 flex-shrink-0" />
+          <Clock class="w-3.5 h-3.5" />
           <span>{{ event.duration }} min</span>
         </div>
       </div>
@@ -52,61 +51,61 @@
         <!-- Like -->
         <button
           @click.stop="toggleLike"
-          class="flex items-center gap-1.5 text-sm transition-colors"
+          class="flex items-center gap-2 text-sm font-medium transition-all active:scale-95"
           :class="event.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'"
         >
-          <Heart
-            class="w-4 h-4 transition-all"
+          <Heart 
+            class="w-5 h-5 transition-all" 
             :class="event.isLiked ? 'fill-red-500' : ''"
           />
-          <span class="font-medium">{{ event.likesCount || 0 }}</span>
+          <span>{{ event.likesCount || 0 }}</span>
         </button>
 
         <!-- Bookmark -->
         <button
           @click.stop="toggleBookmark"
-          class="flex items-center gap-1.5 text-sm transition-colors"
+          class="flex items-center gap-2 text-sm font-medium transition-all active:scale-95"
           :class="event.isBookmarked ? 'text-amber-500' : 'text-gray-400 hover:text-amber-500'"
         >
-          <Bookmark
-            class="w-4 h-4 transition-all"
+          <Bookmark 
+            class="w-5 h-5 transition-all" 
             :class="event.isBookmarked ? 'fill-amber-500' : ''"
           />
         </button>
 
         <!-- Rating -->
-        <div class="flex items-center gap-1 text-sm text-amber-500">
+        <div class="flex items-center gap-1 text-amber-500 text-sm">
           <Star class="w-4 h-4 fill-amber-400" />
-          <span class="font-medium text-gray-700">
-            {{ event.avgRating ? event.avgRating.toFixed(1) : '—' }}
-          </span>
+          <span>{{ event.avgRating ? event.avgRating.toFixed(1) : '—' }}</span>
         </div>
 
-        <NuxtLink
+        <!-- View -->
+        <NuxtLink 
           :to="`/events/${event.id}`"
-          class="flex items-center gap-1 text-brand-blue font-semibold text-sm hover:underline"
+          class="text-brand-blue font-semibold text-sm hover:underline flex items-center gap-1"
         >
-          View
+          View 
           <ArrowRight class="w-3.5 h-3.5" />
         </NuxtLink>
-
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { MapPin, Clock, Heart, Bookmark, Star, ArrowRight, CalendarDays } from 'lucide-vue-next'
 import { useEventsStore } from '../stores/eventsStore'
 import { getEventCategoryLabel } from '../utils/categoryFormatter'
 
-const props = defineProps<{ event: any }>()
+const props = defineProps<{
+  event: any
+}>()
 
 const eventsStore = useEventsStore()
 
 const categoryLabel = computed(() => getEventCategoryLabel(props.event))
 
-const toggleLike     = () => eventsStore.toggleLike(props.event.id)
+// Real interactions
+const toggleLike = () => eventsStore.toggleLike(props.event.id)
 const toggleBookmark = () => eventsStore.toggleBookmark(props.event.id)
 </script>

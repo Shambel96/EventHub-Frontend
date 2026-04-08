@@ -7,14 +7,14 @@ import { formatDuration, parseDuration } from '../utils/durationFormatter'
 import { useAuthStore } from './authStore'
 export const useEventsStore = defineStore('events', () => {
   const { $authFetch, $fetchNoAuth } = useApi()
-  const authStore = useAuthStore()
-
+  
   const events       = ref<AppEvent[]>([])
   const currentEvent = ref<any>(null)
   const isLoading    = ref(false)
   const error        = ref<string | null>(null)
   const totalCount   = ref(0)
 
+  // ── Helpers ───────────────────────────────────────────
   function unwrap(response: any) {
     return response?.data ?? response
   }
