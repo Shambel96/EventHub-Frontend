@@ -7,6 +7,7 @@ export const useApi = () => {
   const baseURL = 'http://localhost:3000';
 
   const $authFetch = async <T>(request: string, options: any = {}) => {
+      console.log('Token:', authStore.token) 
     return $fetch<T>(request, {
       baseURL,
       ...options,

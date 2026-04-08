@@ -1,240 +1,333 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen bg-gray-50">
+
     <!-- Loading -->
-    <div v-if="eventsStore.isLoading" class="max-w-4xl mx-auto flex justify-center py-20">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    <div v-if="eventsStore.isLoading" class="flex justify-center items-center py-40">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue" />
     </div>
 
-    <!-- Event Content -->
-    <div v-else-if="event" class="max-w-4xl mx-auto bg-white rounded-3xl shadow-sm overflow-hidden">
-      
+    <!-- Error -->
+    <div v-else-if="eventsStore.error" class="max-w-3xl mx-auto px-4 py-20 text-center">
+      <p class="text-red-500 font-medium">{{ eventsStore.error }}</p>
+      <NuxtLink to="/events" class="mt-4 inline-block text-brand-blue hover:underline">← Back to Events</NuxtLink>
+    </div>
+
+    <template v-else-if="event">
+
       <!-- Hero Image -->
-      <div class="h-80 sm:h-96 bg-gray-200 relative">
-        <img 
-          v-if="event.images && event.images.length > 0" 
-          :src="event.images[0]?.url" 
+      <div class="relative h-80 md:h-[420px] bg-gradient-to-br from-blue-600 to-indigo-700 overflow-hidden">
+        <img
+          v-if="event.images?.length"
+          :src="event.images[0]?.url"
           class="w-full h-full object-cover"
-          alt="Event banner"
+          alt="Event cover"
         />
-        <div v-else class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-600 to-blue-700 text-white">
-          <!-- Fallback Image Icon -->
-          <svg class="w-20 h-20 opacity-50 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-          </svg>
-          <span class="text-white/70 font-medium">No Image Available</span>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+
+        <NuxtLink
+          to="/events"
+          class="absolute top-6 left-6 flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-white/30 transition"
+        >
+          <ArrowLeft class="w-4 h-4" />
+          Back
+        </NuxtLink>
+
+        <div class="absolute top-6 right-6 flex gap-2">
+          <span class="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">
+            {{ event.category?.name || event.categoryId }}
+          </span>
+          <span class="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">
+            {{ event.isPaid && event.price ? `$${event.price}` : 'Free' }}
+          </span>
         </div>
 
-        <!-- Category & Price Badge -->
-        <div class="absolute top-6 left-6 bg-white px-4 py-2 rounded-2xl shadow font-bold text-sm">
-          {{ event.category?.name || 'Event' }}
-        </div>
-        <div class="absolute top-6 right-6 bg-white px-5 py-2 rounded-2xl shadow font-bold">
-          {{ event.isPaid ? `$${event.price}` : 'Free' }}
+        <div class="absolute bottom-0 left-0 right-0 px-6 md:px-10 py-8">
+          <h1 class="text-3xl md:text-4xl font-extrabold text-white leading-tight drop-shadow-lg">
+            {{ event.title }}
+          </h1>
         </div>
       </div>
 
-      <div class="p-8 sm:p-12">
-        <h1 class="text-4xl font-bold text-gray-900 leading-tight mb-6">{{ event.title }}</h1>
+      <!-- Main content -->
+      <div class="max-w-5xl mx-auto px-4 md:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        <!-- Details Grid -->
-        <div class="flex flex-wrap items-center gap-x-8 gap-y-4 text-gray-600 mb-10">
-          <!-- Location Icon -->
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-            </svg>
-            <span>{{ event.location || 'Online' }}</span>
-          </div>
-          
-          <!-- Calendar Icon -->
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-            </svg>
-            <span>{{ new Date(event.date || event.startDate).toLocaleDateString() }}</span>
+        <!-- Left -->
+        <div class="lg:col-span-2 space-y-8">
+
+          <!-- Description -->
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-7">
+            <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <FileText class="w-5 h-5 text-brand-blue" /> About this event
+            </h2>
+            <p class="text-gray-600 leading-relaxed whitespace-pre-line">{{ event.description }}</p>
           </div>
 
-          <!-- Clock Icon -->
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{{ event.duration }} minutes</span>
-          </div>
-        </div>
-
-        <p class="text-lg text-gray-700 leading-relaxed mb-12 whitespace-pre-line">
-          {{ event.description }}
-        </p>
-
-        <!-- Interaction Bar -->
-        <div class="flex items-center justify-between border-y border-gray-100 py-6 mb-12">
-          
-          <div class="flex items-center gap-6">
-            <!-- Like Button -->
-            <button 
-              @click="toggleLike"
-              class="group flex items-center gap-2 transition active:scale-95"
-              :class="event.hasLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-400'"
-            >
-              <svg 
-                class="w-7 h-7 transition-transform group-hover:scale-110" 
-                :fill="event.hasLiked ? 'currentColor' : 'none'" 
-                viewBox="0 0 24 24" 
-                stroke-width="1.5" 
-                stroke="currentColor"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-              </svg>
-              <span class="text-base font-medium text-gray-700">{{ event.likesCount || 0 }}</span>
-            </button>
-
-            <!-- Bookmark Button -->
-            <button 
-              @click="toggleBookmark"
-              class="group flex items-center gap-2 transition active:scale-95"
-              :class="event.hasBookmarked ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-500'"
-            >
-              <svg 
-                class="w-7 h-7 transition-transform group-hover:scale-110" 
-                :fill="event.hasBookmarked ? 'currentColor' : 'none'" 
-                viewBox="0 0 24 24" 
-                stroke-width="1.5" 
-                stroke="currentColor"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
-              </svg>
-              <span class="text-sm font-medium text-gray-700">Save</span>
-            </button>
+          <!-- Steps -->
+          <div v-if="event.steps?.length" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-7">
+            <h2 class="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2">
+              <List class="w-5 h-5 text-brand-blue" /> Itinerary
+            </h2>
+            <div class="space-y-4">
+              <div v-for="(step, idx) in event.steps" :key="step.id" class="flex gap-4">
+                <div class="flex-shrink-0 w-8 h-8 bg-brand-blue text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  {{ Number(idx) + 1 }}
+                </div>
+                <div>
+                  <p class="font-semibold text-gray-800">{{ step.title }}</p>
+                  <p class="text-sm text-gray-500 mt-1">{{ step.description }}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Rating -->
-          <div class="flex items-center gap-2">
-            <div class="flex" @mouseleave="hoverRating = 0">
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-7">
+            <h2 class="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
+              <Star class="w-5 h-5 text-amber-400 fill-amber-400" /> Rate this event
+            </h2>
+            <p class="text-sm text-gray-400 mb-5">
+              {{ event.totalRatings }} rating{{ event.totalRatings !== 1 ? 's' : '' }} ·
+              avg {{ event.avgRating ? event.avgRating.toFixed(1) : '—' }} / 5
+            </p>
+
+            <div class="flex items-center gap-1 mb-3">
               <button
-                v-for="star in 5"
-                :key="star"
-                @mouseover="hoverRating = star"
-                @click="rateEvent(star)"
-                class="transition-transform active:scale-90 p-0.5"
-                :class="star <= (hoverRating || event.userRating || Math.floor(event.averageRating || 0)) ? 'text-yellow-400' : 'text-gray-200 hover:text-yellow-200'"
+                v-for="n in 5"
+                :key="n"
+                type="button"
+                @click="submitRating(n)"
+                @mouseenter="hoverRating = n"
+                @mouseleave="hoverRating = 0"
+                :disabled="ratingLoading"
+                class="transition-transform hover:scale-110 disabled:cursor-wait"
               >
-                <!-- Star Icon -->
-                <svg 
-                  class="w-7 h-7" 
-                  :fill="star <= (hoverRating || event.userRating || Math.floor(event.averageRating || 0)) ? 'currentColor' : 'none'" 
-                  viewBox="0 0 24 24" 
-                  stroke-width="1.5" 
-                  stroke="currentColor"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385c.148.621-.531 1.121-1.097.82l-4.644-2.464a.562.562 0 00-.546 0l-4.644 2.464c-.566.301-1.245-.199-1.097-.82l1.285-5.385a.563.563 0 00-.182-.557l-4.204-3.602c-.38-.325-.178-.948.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                </svg>
+                <Star
+                  class="w-8 h-8 transition-colors"
+                  :class="n <= (hoverRating || event.userRating || 0)
+                    ? 'text-amber-400 fill-amber-400'
+                    : 'text-gray-200 fill-gray-200'"
+                />
               </button>
+              <span v-if="ratingLoading" class="ml-3 text-xs text-gray-400">Saving...</span>
+              <span v-else-if="event.userRating" class="ml-3 text-xs text-green-500 font-medium flex items-center gap-1">
+                <CheckCircle class="w-3.5 h-3.5" /> You rated {{ event.userRating }}/5
+              </span>
             </div>
-            <span class="text-sm text-gray-500 font-medium ml-1">
-              {{ event.averageRating ? event.averageRating.toFixed(1) : '0.0' }} 
-              ({{ event.totalRatings }})
-            </span>
+            <p v-if="ratingError" class="text-xs text-red-500">{{ ratingError }}</p>
           </div>
-        </div>
 
-        <!-- Comments Section -->
-        <div>
-          <h3 class="text-2xl font-bold mb-6">Comments ({{ event.comments?.length || 0 }})</h3>
+          <!-- Comments -->
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-7">
+            <h2 class="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2">
+              <MessageCircle class="w-5 h-5 text-brand-blue" />
+              Comments
+              <span class="ml-auto text-sm font-normal text-gray-400">{{ event.comments?.length || 0 }}</span>
+            </h2>
 
-          <!-- Comment Form -->
-          <form @submit.prevent="submitComment" class="mb-10">
-            <textarea 
-              v-model="newComment"
-              rows="3"
-              class="w-full border border-gray-200 rounded-2xl p-5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none outline-none transition-all"
-              placeholder="Share your thoughts about this event..."
-              required
-            ></textarea>
-            <div class="flex justify-end mt-3">
-              <button 
-                type="submit"
-                :disabled="isSubmittingComment || !newComment.trim()"
-                class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-semibold rounded-2xl transition-colors"
-              >
-                {{ isSubmittingComment ? 'Posting...' : 'Post Comment' }}
-              </button>
-            </div>
-          </form>
-
-          <!-- Comments List -->
-          <div class="space-y-8">
-            <div v-for="comment in event.comments" :key="comment.id" class="flex gap-4">
-              <div class="w-10 h-10 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center font-bold text-indigo-600">
-                {{ comment.user?.name?.charAt(0).toUpperCase() || '?' }}
+            <!-- Post comment -->
+            <div class="mb-6">
+              <textarea
+                v-model="commentText"
+                rows="3"
+                placeholder="Share your thoughts about this event..."
+                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none transition"
+                :disabled="commentLoading"
+              />
+              <div class="flex justify-between items-center mt-2">
+                <p v-if="commentError" class="text-xs text-red-500">{{ commentError }}</p>
+                <button
+                  @click="submitComment"
+                  :disabled="!commentText.trim() || commentLoading"
+                  class="ml-auto flex items-center gap-2 bg-brand-blue text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send class="w-4 h-4" />
+                  {{ commentLoading ? 'Posting...' : 'Post' }}
+                </button>
               </div>
-              <div class="flex-1">
-                <div class="flex justify-between">
-                  <p class="font-semibold text-gray-900">{{ comment.user?.name || 'Anonymous' }}</p>
-                  <span class="text-xs text-gray-500">{{ new Date(comment.createdAt).toLocaleDateString() }}</span>
+            </div>
+
+            <!-- Comments list -->
+            <div v-if="event.comments?.length" class="space-y-4">
+              <div v-for="comment in event.comments" :key="comment.id" class="flex gap-3">
+                <div class="flex-shrink-0 w-9 h-9 rounded-full bg-brand-blue/10 text-brand-blue font-bold text-sm flex items-center justify-center uppercase">
+                  {{ (comment.user?.name || comment.user?.email || 'U').charAt(0) }}
                 </div>
-                <p class="text-gray-700 mt-1 leading-relaxed">{{ comment.content }}</p>
+                <div class="flex-1 bg-gray-50 rounded-xl px-4 py-3">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm font-semibold text-gray-800">
+                      {{ comment.user?.name || comment.user?.email || 'Anonymous' }}
+                    </span>
+                    <span class="text-xs text-gray-400">{{ formatDate(comment.createdAt) }}</span>
+                  </div>
+                  <p class="text-sm text-gray-600 leading-relaxed">{{ comment.content }}</p>
+                </div>
               </div>
             </div>
 
-            <div v-if="!event.comments || event.comments.length === 0" class="text-center py-10 text-gray-500">
+            <div v-else class="text-center py-8 text-gray-400 text-sm italic">
               No comments yet. Be the first to comment!
             </div>
           </div>
+
+        </div>
+
+        <!-- Right sidebar -->
+        <div class="space-y-5">
+
+          <!-- Social actions — always enabled, backend handles auth rejection -->
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center justify-around">
+
+            <button
+              @click="handleLike"
+              :disabled="likeLoading"
+              class="flex flex-col items-center gap-1.5 group disabled:cursor-wait"
+            >
+              <div class="w-11 h-11 rounded-full flex items-center justify-center transition-colors"
+                :class="event.isLiked ? 'bg-red-50' : 'bg-gray-50 group-hover:bg-red-50'">
+                <Heart class="w-5 h-5 transition-all"
+                  :class="event.isLiked ? 'text-red-500 fill-red-500' : 'text-gray-400 group-hover:text-red-400'" />
+              </div>
+              <span class="text-xs font-semibold" :class="event.isLiked ? 'text-red-500' : 'text-gray-500'">
+                {{ event.likesCount || 0 }}
+              </span>
+            </button>
+
+            <button
+              @click="handleBookmark"
+              :disabled="bookmarkLoading"
+              class="flex flex-col items-center gap-1.5 group disabled:cursor-wait"
+            >
+              <div class="w-11 h-11 rounded-full flex items-center justify-center transition-colors"
+                :class="event.isBookmarked ? 'bg-amber-50' : 'bg-gray-50 group-hover:bg-amber-50'">
+                <Bookmark class="w-5 h-5 transition-all"
+                  :class="event.isBookmarked ? 'text-amber-500 fill-amber-500' : 'text-gray-400 group-hover:text-amber-400'" />
+              </div>
+              <span class="text-xs font-semibold" :class="event.isBookmarked ? 'text-amber-500' : 'text-gray-500'">
+                {{ event.isBookmarked ? 'Saved' : 'Save' }}
+              </span>
+            </button>
+
+            <div class="flex flex-col items-center gap-1.5">
+              <div class="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center">
+                <MessageCircle class="w-5 h-5 text-gray-400" />
+              </div>
+              <span class="text-xs font-semibold text-gray-500">{{ event.commentsCount || 0 }}</span>
+            </div>
+
+          </div>
+
+          <!-- Event meta -->
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold text-gray-800 text-sm uppercase tracking-wide">Event Details</h3>
+
+            <div class="flex items-start gap-3 text-sm text-gray-600">
+              <MapPin class="w-4 h-4 text-brand-blue mt-0.5 flex-shrink-0" />
+              <span>{{ event.location || 'Online' }}</span>
+            </div>
+            <div class="flex items-start gap-3 text-sm text-gray-600">
+              <Clock class="w-4 h-4 text-brand-blue mt-0.5 flex-shrink-0" />
+              <span>{{ event.duration }}</span>
+            </div>
+            <div v-if="event.startDate" class="flex items-start gap-3 text-sm text-gray-600">
+              <CalendarDays class="w-4 h-4 text-brand-blue mt-0.5 flex-shrink-0" />
+              <span>{{ formatDate(event.startDate) }}</span>
+            </div>
+            <div class="flex items-start gap-3 text-sm text-gray-600">
+              <Star class="w-4 h-4 text-amber-400 fill-amber-400 mt-0.5 flex-shrink-0" />
+              <span>{{ event.avgRating ? event.avgRating.toFixed(1) : 'No ratings yet' }} / 5</span>
+            </div>
+          </div>
+
+          <!-- Gallery -->
+          <div v-if="event.images?.length > 1" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h3 class="font-bold text-gray-800 text-sm uppercase tracking-wide mb-4">Gallery</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <img
+                v-for="img in event.images.slice(1)"
+                :key="img.id"
+                :src="img.url"
+                class="w-full aspect-square object-cover rounded-xl"
+                alt="Event image"
+              />
+            </div>
+          </div>
+
         </div>
       </div>
-    </div>
+    </template>
 
-    <!-- Event Not Found -->
-    <div v-else class="text-center py-20 text-gray-500">
-      <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-      <p class="text-xl font-medium text-gray-900">Event not found</p>
-      <p class="mt-2 text-gray-500">The event you are looking for doesn't exist or failed to load.</p>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useEventsStore } from '~/stores/eventsStore'
+import {
+  ArrowLeft, Heart, Bookmark, Star, MessageCircle,
+  MapPin, Clock, CalendarDays, FileText, List, Send, CheckCircle
+} from 'lucide-vue-next'
+import { useEventsStore } from '../../stores/eventsStore'
 
-const route = useRoute()
+const route       = useRoute()
 const eventsStore = useEventsStore()
 
-const hoverRating = ref(0)
-const newComment = ref('')
-const isSubmittingComment = ref(false)
-
 const eventId = computed(() => route.params.id as string)
-const event = computed(() => eventsStore.currentEvent)
+const event   = computed(() => eventsStore.currentEvent)
 
-onMounted(() => {
-  if (eventId.value) {
-    eventsStore.fetchEventById(eventId.value)
-  }
-})
+const hoverRating     = ref(0)
+const ratingLoading   = ref(false)
+const ratingError     = ref('')
+const commentText     = ref('')
+const commentLoading  = ref(false)
+const commentError    = ref('')
+const likeLoading     = ref(false)
+const bookmarkLoading = ref(false)
 
-const toggleLike = () => eventsStore.toggleLike(eventId.value)
-const toggleBookmark = () => eventsStore.toggleBookmark(eventId.value)
+onMounted(() => eventsStore.fetchEventById(eventId.value))
 
-const rateEvent = (rating: number) => {
-  hoverRating.value = rating
-  eventsStore.rateEvent(eventId.value, rating)
+async function handleLike() {
+  likeLoading.value = true
+  try { await eventsStore.toggleLike(eventId.value) } catch {}
+  finally { likeLoading.value = false }
 }
 
-const submitComment = async () => {
-  if (!newComment.value.trim()) return
+async function handleBookmark() {
+  bookmarkLoading.value = true
+  try { await eventsStore.toggleBookmark(eventId.value) } catch {}
+  finally { bookmarkLoading.value = false }
+}
 
-  isSubmittingComment.value = true
-  const success = await eventsStore.postComment(eventId.value, newComment.value)
-
-  if (success) {
-    newComment.value = ''
+async function submitRating(score: number) {
+  ratingError.value = ''
+  ratingLoading.value = true
+  try {
+    await eventsStore.rateEvent(eventId.value, score)
+  } catch (err: any) {
+    ratingError.value = err.message || 'Failed to submit rating.'
+  } finally {
+    ratingLoading.value = false
   }
-  isSubmittingComment.value = false
+}
+
+async function submitComment() {
+  if (!commentText.value.trim()) return
+  commentError.value = ''
+  commentLoading.value = true
+  try {
+    await eventsStore.postComment(eventId.value, commentText.value.trim())
+    commentText.value = ''
+  } catch (err: any) {
+    commentError.value = err.message || 'Failed to post comment.'
+  } finally {
+    commentLoading.value = false
+  }
+}
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })
 }
 </script>
