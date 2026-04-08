@@ -66,3 +66,34 @@ export interface Event {
   commentsCount: number;
   isBookmarked: boolean;
 }
+export interface User {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+}
+
+export interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: User;
+}
+
+export interface EventDetail {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  date: string;
+  
+  // Social Stats
+  likesCount: number;
+  averageRating: number;
+  totalRatings: number;
+  comments: Comment[];
+  
+  // Current User's State (Crucial for UI)
+  hasLiked: boolean;
+  hasBookmarked: boolean;
+  userRating: number | null; // 1-5 or null if not rated
+}

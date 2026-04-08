@@ -7,8 +7,22 @@
       </NuxtLink>
     </div>
 
+    <!-- Progress indicator -->
+    <div v-if="isSubmitting" class="mb-6 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+      <p class="text-sm font-semibold text-brand-blue mb-2">{{ submitStatus }}</p>
+      <div class="w-full bg-gray-100 rounded-full h-1.5">
+        <div class="bg-brand-blue h-1.5 rounded-full transition-all duration-500" :style="{ width: `${submitProgress}%` }" />
+      </div>
+    </div>
+
+    <!-- Error banner -->
+    <div v-if="submitError" class="mb-6 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      {{ submitError }}
+    </div>
+
     <form @submit.prevent="submitEvent" class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 space-y-8">
-      
+
       <!-- Basic Info -->
       <section>
         <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Basic Info</h2>
@@ -22,8 +36,12 @@
             <textarea v-model="form.description" required rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none" placeholder="Detailed event description..."></textarea>
           </div>
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Price (USD) <span class="text-red-500">*</span></label>
-            <input v-model.number="form.price" required type="number" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none" />
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Price (USD)</label>
+            <input v-model.number="form.price" type="number" min="0" step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none" placeholder="0 for free events" />
+          </div>
+          <div class="flex items-center gap-3 pt-6">
+            <input type="checkbox" id="isPaid" v-model="form.isPaid" class="h-4 w-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue" />
+            <label for="isPaid" class="text-sm font-semibold text-gray-700">This is a paid event</label>
           </div>
         </div>
       </section>
@@ -37,21 +55,20 @@
             <input v-model="form.startDate" required type="datetime-local" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none" />
           </div>
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">End Date & Time <span class="text-red-500">*</span></label>
-            <input v-model="form.endDate" required type="datetime-local" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none" />
+            <label class="block text-sm font-semibold text-gray-700 mb-1">End Date & Time</label>
+            <input v-model="form.endDate" type="datetime-local" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none" />
           </div>
           <div v-if="calculatedDuration" class="md:col-span-2 bg-blue-50/50 border border-blue-100 text-brand-blue p-3 rounded-lg text-sm font-semibold flex items-center">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Calculated Duration: {{ calculatedDuration }}
+            Calculated Duration: {{ calculatedDuration.label }} ({{ calculatedDuration.minutes }} minutes)
           </div>
         </div>
       </section>
 
-      <!-- Category & Amenities -->
+      <!-- Category & Location -->
       <section>
-        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Category & Amenities</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <!-- Category -->
+        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Category & Location</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Category <span class="text-red-500">*</span></label>
             <select v-model="selectedCategory" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none">
@@ -63,36 +80,16 @@
               <input v-if="selectedCategory === 'Other'" v-model="customCategory" type="text" placeholder="Type custom category..." class="mt-3 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none" />
             </transition>
           </div>
-
-          <!-- Location -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Location <span class="text-red-500">*</span></label>
             <input v-model="form.location" required type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none" placeholder="E.g., San Francisco, CA or Virtual" />
-          </div>
-
-          <!-- Amenities -->
-          <div class="md:col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-3">Amenities Provide check for all that apply</label>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-              <label v-for="amenity in presetAmenities" :key="amenity" class="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded transition">
-                <input type="checkbox" :value="amenity" v-model="selectedAmenities" class="rounded border-gray-300 text-brand-blue focus:ring-brand-blue h-4 w-4" />
-                <span>{{ amenity }}</span>
-              </label>
-              <label class="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded transition border-t sm:border-t-0 sm:border-l border-gray-200 sm:pl-4">
-                <input type="checkbox" v-model="isOtherAmenitySelected" class="rounded border-gray-300 text-brand-blue focus:ring-brand-blue h-4 w-4" />
-                <span class="font-semibold">Other (Specify)</span>
-              </label>
-            </div>
-            <transition name="fade">
-              <input v-if="isOtherAmenitySelected" v-model="customAmenity" type="text" placeholder="Separate other amenities using commas..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none text-sm" />
-            </transition>
           </div>
         </div>
       </section>
 
       <!-- Images -->
       <section>
-        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Event Marketing Images</h2>
+        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Event Images</h2>
         <div class="border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-8 flex flex-col items-center justify-center hover:bg-blue-50/50 hover:border-brand-blue transition cursor-pointer relative group">
           <input type="file" multiple accept="image/*" @change="handleFileUpload" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
           <div class="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
@@ -100,14 +97,14 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
           </div>
-          <p class="text-sm text-gray-700 font-semibold mb-1">Click or drag images to upload to cloud</p>
-          <p class="text-xs text-gray-500">A simulated upload instantly generates cloud URLs.</p>
+          <p class="text-sm text-gray-700 font-semibold mb-1">Click or drag images to upload</p>
+          <p class="text-xs text-gray-500">Images will be uploaded after the event is created.</p>
         </div>
-        
-        <div v-if="form.images.length > 0" class="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div v-for="(img, idx) in form.images" :key="img.id" class="relative group aspect-square bg-gray-100 rounded-xl overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition">
-            <img :src="img.url" class="w-full h-full object-cover" />
-            <button type="button" @click="form.images.splice(idx, 1)" class="absolute top-2 right-2 bg-red-500/90 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition hover:bg-red-600 shadow-md transform hover:scale-110">
+
+        <div v-if="selectedFiles.length > 0" class="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div v-for="(file, idx) in selectedFiles" :key="idx" class="relative group aspect-square bg-gray-100 rounded-xl overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition">
+            <img :src="file.preview" class="w-full h-full object-cover" />
+            <button type="button" @click="removeFile(idx)" class="absolute top-2 right-2 bg-red-500/90 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition hover:bg-red-600 shadow-md">
               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -123,11 +120,11 @@
             Add Step
           </button>
         </div>
-        
+
         <div v-if="form.steps.length === 0" class="text-center py-8 bg-gray-50 border border-gray-100 rounded-xl text-gray-500 text-sm italic">
           No steps added yet. Add an itinerary for conferences, multi-day festivals, or workshops.
         </div>
-        
+
         <transition-group name="list" tag="div" class="space-y-4">
           <div v-for="(step, index) in form.steps" :key="step.id" class="bg-gray-50 p-5 rounded-xl border border-gray-200 relative group">
             <div class="absolute -left-3 -top-3 bg-brand-blue text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow">
@@ -143,7 +140,7 @@
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">Step Description</label>
-                <textarea v-model="step.description" required rows="2" class="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue" placeholder="Detail what happens during this step..."></textarea>
+                <textarea v-model="step.description" rows="2" class="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue" placeholder="Detail what happens during this step..."></textarea>
               </div>
             </div>
           </div>
@@ -157,7 +154,7 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          {{ isSubmitting ? 'Publishing Event...' : 'Launch Event' }}
+          {{ isSubmitting ? 'Publishing...' : 'Launch Event' }}
         </button>
       </div>
     </form>
@@ -165,117 +162,172 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { useEventsStore } from '../../stores/eventsStore';
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useApi } from '../../composables/useApi'
 
-const router = useRouter();
-const eventsStore = useEventsStore();
-const isSubmitting = ref(false);
+const router = useRouter()
+const { $authFetch } = useApi()
 
-const presetCategories = ['Conference', 'Music Festival', 'Tech Workshop', 'Business Networking', 'Live Concert', 'Art Exhibition', 'Local Meetup', 'Online Webinar'];
-const presetAmenities = ['High-Speed WiFi', 'Valet Parking', 'Catered Food & Drinks', 'Wheelchair Accessible', 'VIP Lounge', 'Air Conditioning', 'Coat Check', 'On-site Security', 'ATM Machines', 'First Aid Station'];
+const isSubmitting = ref(false)
+const submitStatus = ref('')
+const submitProgress = ref(0)
+const submitError = ref('')
 
-const selectedCategory = ref('');
-const customCategory = ref('');
+const presetCategories = ['Conference', 'Music Festival', 'Tech Workshop', 'Business Networking', 'Live Concert', 'Art Exhibition', 'Local Meetup', 'Online Webinar']
 
-const selectedAmenities = ref<string[]>([]);
-const isOtherAmenitySelected = ref(false);
-const customAmenity = ref('');
+const selectedCategory = ref('')
+const customCategory = ref('')
+
+// Raw File objects for real upload
+const selectedFiles = ref<{ file: File; preview: string }[]>([])
 
 const form = ref({
   title: '',
   description: '',
   price: 0,
+  isPaid: false,
   location: '',
   startDate: '',
   endDate: '',
-  images: [] as { id: string, url: string }[],
-  steps: [] as { id: string, title: string, description: string }[]
-});
+  steps: [] as { id: string; title: string; description: string }[],
+})
 
-const calculateDuration = (begin: string, end: string) => {
-  if (!begin || !end) return '';
-  const d1 = new Date(begin);
-  const d2 = new Date(end);
-  if (d2 <= d1) return 'Invalid dates (End must be after Begin)';
-  
-  const diffHours = Math.abs(d2.getTime() - d1.getTime()) / 36e5;
-  if (diffHours < 24) return `${diffHours.toFixed(1)} hours`;
-  return `${(diffHours / 24).toFixed(1)} days`;
-};
+// ── Duration ─────────────────────────────────────────
+const calculatedDuration = computed(() => {
+  if (!form.value.startDate || !form.value.endDate) return null
+  const d1 = new Date(form.value.startDate)
+  const d2 = new Date(form.value.endDate)
+  if (d2 <= d1) return null
+  const minutes = Math.round((d2.getTime() - d1.getTime()) / 60000)
+  const hours = minutes / 60
+  const label = hours < 24 ? `${hours.toFixed(1)} hours` : `${(hours / 24).toFixed(1)} days`
+  return { minutes, label }
+})
 
-const calculatedDuration = computed(() => calculateDuration(form.value.startDate, form.value.endDate));
+// ── Files ─────────────────────────────────────────────
+const handleFileUpload = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  if (!input.files) return
+  Array.from(input.files).forEach(file => {
+    selectedFiles.value.push({ file, preview: URL.createObjectURL(file) })
+  })
+  // Reset input so same file can be re-selected
+  input.value = ''
+}
 
-const handleFileUpload = async (event: any) => {
-  const files = event.target.files;
-  if (!files || files.length === 0) return;
-  
-  // Simulate cloud upload returning URLs
-  for (let i = 0; i < files.length; i++) {
-    const fakeId = Math.random().toString(36).substring(7);
-    const fakeCloudUrl = URL.createObjectURL(files[i]); 
-    form.value.images.push({ id: fakeId, url: fakeCloudUrl });
-  }
-};
+const removeFile = (idx: number) => {
+  const file = selectedFiles.value[idx]
+  if (!file) return
 
+  URL.revokeObjectURL(file.preview)
+  selectedFiles.value.splice(idx, 1)
+}
+
+// ── Steps ─────────────────────────────────────────────
 const addStep = () => {
-  form.value.steps.push({
-    id: Math.random().toString(36).substring(7),
-    title: '',
-    description: ''
-  });
-};
+  form.value.steps.push({ id: Math.random().toString(36).substring(7), title: '', description: '' })
+}
 
+// ── Submit ────────────────────────────────────────────
 const submitEvent = async () => {
-  isSubmitting.value = true;
-  
-  const finalCategory = selectedCategory.value === 'Other' ? customCategory.value : selectedCategory.value;
-  
-  const finalAmenities = [...selectedAmenities.value];
-  if (isOtherAmenitySelected.value && customAmenity.value) {
-    const customs = customAmenity.value.split(',').map(s => s.trim()).filter(Boolean);
-    finalAmenities.push(...customs);
+  submitError.value = ''
+
+  // Basic validation
+  if (!form.value.title || !form.value.description || !form.value.startDate || !form.value.location) {
+    submitError.value = 'Please fill in all required fields.'
+    return
+  }
+  if (!selectedCategory.value) {
+    submitError.value = 'Please select a category.'
+    return
   }
 
-  const payload = {
-    title: form.value.title,
-    description: form.value.description,
-    price: form.value.price,
-    startDate: new Date(form.value.startDate).toISOString(),
-    endDate: new Date(form.value.endDate).toISOString(),
-    duration: calculatedDuration.value,
-    location: form.value.location,
-    categoryId: finalCategory || 'unspecified',
-    amenities: finalAmenities,
-    images: form.value.images,
-    steps: form.value.steps
-  };
+  isSubmitting.value = true
+  submitProgress.value = 10
 
   try {
-    await eventsStore.addEvent(payload as any);
-    router.push('/events');
-  } catch (e) {
-    console.error('Failed to create event', e);
+    const finalCategory = selectedCategory.value === 'Other' ? customCategory.value : selectedCategory.value
+
+    // ── Step 1: Create the event ───────────────────────
+    submitStatus.value = 'Creating event...'
+    submitProgress.value = 20
+
+    const eventPayload = {
+      title: form.value.title,
+      description: form.value.description,
+      duration: calculatedDuration.value?.minutes ?? 0,   // backend expects number (minutes)
+      location: form.value.location,
+      isPaid: form.value.isPaid,
+      price: form.value.isPaid ? form.value.price : 0,
+      categoryId: finalCategory || 'unspecified',
+      startDate: new Date(form.value.startDate).toISOString(),
+      endDate: form.value.endDate ? new Date(form.value.endDate).toISOString() : undefined,
+    }
+
+    const createdEvent = await $authFetch<any>('/events', {
+      method: 'POST',
+      body: eventPayload,
+    })
+
+    // Unwrap { success, message, data } envelope
+    const eventId = createdEvent?.data?.id ?? createdEvent?.id
+    if (!eventId) throw new Error('Event creation failed — no event ID returned.')
+
+    submitProgress.value = 40
+
+    // ── Step 2: Upload images ──────────────────────────
+    if (selectedFiles.value.length > 0) {
+      submitStatus.value = `Uploading ${selectedFiles.value.length} image(s)...`
+
+      const formData = new FormData()
+      selectedFiles.value.forEach(f => formData.append('images', f.file))
+
+      await $authFetch(`/events/${eventId}/images`, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type — browser sets it with boundary for FormData
+        headers: {},
+      })
+    }
+
+    submitProgress.value = 70
+
+    // ── Step 3: Create steps one by one ───────────────
+    if (form.value.steps.length > 0) {
+      submitStatus.value = 'Adding event steps...'
+
+      for (const step of form.value.steps) {
+        if (!step.title) continue
+        await $authFetch(`/events/${eventId}/steps`, {
+          method: 'POST',
+          body: { title: step.title, description: step.description },
+        })
+      }
+    }
+
+    submitProgress.value = 100
+    submitStatus.value = 'Event published!'
+
+    // Small delay so user sees 100%
+    await new Promise(r => setTimeout(r, 600))
+
+    router.push('/events')
+
+  } catch (err: any) {
+    submitError.value = err?.data?.message ?? err?.message ?? 'Something went wrong. Please try again.'
+    console.error('Create event error:', err)
   } finally {
-    isSubmitting.value = false;
+    isSubmitting.value = false
+    submitProgress.value = 0
+    submitStatus.value = ''
   }
-};
+}
 </script>
 
 <style scoped>
-.list-enter-active, .list-leave-active {
-  transition: all 0.4s ease;
-}
-.list-enter-from, .list-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
+.list-enter-active, .list-leave-active { transition: all 0.4s ease; }
+.list-enter-from, .list-leave-to { opacity: 0; transform: translateY(20px); }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
 </style>

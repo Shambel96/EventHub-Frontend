@@ -53,7 +53,17 @@ export const useAuthStore = defineStore('auth', () => {
     user.value  = data.user
     persist()
   }
-
+// In your auth store (stores/auth.ts)
+// logout() {
+//   this.user = null;
+//   this.token = null;
+  
+//   // Remove token from localStorage
+//   localStorage.removeItem('token');
+  
+//   // Optional: Clear all auth related data
+//   navigateTo('/login');
+// }
   function logout() {
     token.value = null
     user.value  = null

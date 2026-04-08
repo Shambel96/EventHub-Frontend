@@ -17,7 +17,7 @@
       </div>
       <div class="w-full md:w-px h-px md:h-16 bg-gray-200"></div>
       <div class="text-center p-4">
-        <h3 class="text-5xl font-extrabold text-brand-blue mb-2">{{eventsStore.totalEvents}}+</h3>
+        <h3 class="text-5xl font-extrabold text-brand-blue mb-2">{{ eventsStore.events.length }}+</h3>
         <p class="text-gray-500 font-bold tracking-widest uppercase text-xs">New Features Posted</p>
       </div>
     </section>
@@ -36,7 +36,7 @@
       
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
         <EventCard 
-          v-for="event in eventsStore.featuredEvents" 
+          v-for="event in featuredEvents" 
           :key="event.id" 
           :event="event" 
         />
@@ -54,12 +54,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import HeroSlideshow from '../components/HeroSlideshow.vue';
 import EventCard from '../components/EventCard.vue';
 import { useEventsStore } from '../stores/eventsStore';
 
 const eventsStore = useEventsStore();
+const featuredEvents = computed<any[]>(() => eventsStore.events.slice(0, 6));
 
 onMounted(() => {
   eventsStore.fetchEvents();
@@ -71,4 +72,5 @@ useHead({
     { name: 'description', content: 'EventHub is a modern platform to discover and manage events seamlessly powered by Vanta API.' }
   ]
 })
+
 </script>

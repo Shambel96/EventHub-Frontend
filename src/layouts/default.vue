@@ -14,5 +14,4 @@ import Footer from '../components/common/Footer.vue';
 </script>
 
 <style scoped>
-/* Any layout specific styles can go here */
 </style>

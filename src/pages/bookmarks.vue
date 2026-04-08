@@ -21,7 +21,7 @@
     </div>
     
     <!-- Empty State -->
-    <div v-else-if="eventsStore.bookmarkedEvents.length === 0" class="text-center py-24 bg-white border-2 border-dashed border-gray-200 rounded-2xl shadow-sm max-w-2xl mx-auto">
+    <div v-else-if="bookmarkedEvents.length === 0" class="text-center py-24 bg-white border-2 border-dashed border-gray-200 rounded-2xl shadow-sm max-w-2xl mx-auto">
       <svg class="w-20 h-20 text-gray-300 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
       <h3 class="text-2xl font-bold text-gray-800 mb-3">No Bookmarks Yet</h3>
       <p class="text-gray-500 mb-8 max-w-md mx-auto">You haven't saved any events to your collection. Explore the discovery feed, find something exciting, and click the bookmark icon to save it here!</p>
@@ -30,24 +30,30 @@
       </NuxtLink>
     </div>
 
-    <!-- Events Grid -->
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
       <EventCard 
-        v-for="event in eventsStore.bookmarkedEvents" 
+        v-for="event in bookmarkedEvents" 
         :key="event.id" 
-        :event="event" 
+        :event="event"  
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useEventsStore } from '../stores/eventsStore';
 import EventCard from '../components/EventCard.vue';
 
 const eventsStore = useEventsStore();
+type EventCardEvent = InstanceType<typeof EventCard>['$props']['event'];
 
+const bookmarkedEvents = computed<EventCardEvent[]>(() =>
+  eventsStore.events.filter(
+    (event: Record<string, any>): event is EventCardEvent =>
+      Boolean(event?.isBookmarked || event?.bookmarked || event?.is_bookmarked)
+  )
+);
 onMounted(() => {
   if (eventsStore.events.length === 0) {
     eventsStore.fetchEvents();

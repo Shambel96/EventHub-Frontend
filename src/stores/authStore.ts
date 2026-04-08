@@ -4,7 +4,7 @@ import type { User } from '../types/user';
 
 export const useAuthStore = defineStore('auth', () => {
   const config = useRuntimeConfig();
-  
+
   const token = ref<string | null>(null);
   const user = ref<User | null>(null);
   const isLoading = ref(false);
@@ -23,16 +23,63 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  const login = async (email: string, password: string) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const response = await $fetch<any>('/auth/login', {
+        baseURL: 'http://localhost:3000',
+        method: 'POST',
+        body: { email, password },
+      });
+
+      const data = response?.data;
+      setToken(data.token);
+      user.value = data.user;
+      persistUser();
+
+    } catch (err: any) {
+      error.value = err?.data?.message || err?.message || 'Login failed';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const register = async (name: string, email: string, password: string) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const response = await $fetch<any>('/auth/signup', {
+        baseURL: 'http://localhost:3000',
+        method: 'POST',
+        body: { name, email, password },
+      });
+
+      // Backend returns { success, message, data: { data: { token, user } } }
+      // (double nested — backend wraps twice)
+      const data = response?.data?.data ?? response?.data;
+      setToken(data.token);
+      user.value = data.user;
+      persistUser();
+
+    } catch (err: any) {
+      error.value = err?.data?.message || err?.message || 'Registration failed';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   const hydrate = () => {
     if (import.meta.client) {
       const storedToken = localStorage.getItem('auth_token');
       if (storedToken) {
         token.value = storedToken;
       } else if (config.public.testToken) {
-        // Fallback to test token if no local storage token exists
         token.value = config.public.testToken as string;
       }
-      
+
       const storedUser = localStorage.getItem('auth_user');
       if (storedUser) {
         try {
@@ -54,22 +101,17 @@ export const useAuthStore = defineStore('auth', () => {
 
   const fetchProfile = async () => {
     if (!token.value) return;
-
     isLoading.value = true;
     error.value = null;
-
     try {
       const response = await $fetch<User>('/users/me', {
-        baseURL: (config.public.apiBaseURL as string) || 'http://localhost:3344',
-        headers: {
-          Authorization: `Bearer ${token.value}`
-        }
+        baseURL: (config.public.apiBaseURL as string) || 'http://localhost:3000',
+        headers: { Authorization: `Bearer ${token.value}` },
       });
       user.value = response;
       persistUser();
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch profile';
-      console.error('Profile fetch error:', err);
     } finally {
       isLoading.value = false;
     }
@@ -95,6 +137,8 @@ export const useAuthStore = defineStore('auth', () => {
     setToken,
     hydrate,
     fetchProfile,
-    logout
+    login,
+    register,
+    logout,
   };
 });

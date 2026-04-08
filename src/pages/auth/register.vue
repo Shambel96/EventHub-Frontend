@@ -126,7 +126,7 @@
 
     <p class="text-center text-sm text-white/40">
       Already have an account?
-      <NuxtLink to="/login" class="text-white font-semibold hover:text-white/80 transition-colors ml-1">
+      <NuxtLink to="/auth/login" class="text-white font-semibold hover:text-white/80 transition-colors ml-1">
         Sign in
       </NuxtLink>
     </p>
@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, reactive, ref, computed } from 'vue'
+import {  reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 
@@ -142,12 +142,22 @@ const router    = useRouter()
 const authStore = useAuthStore()
 
 onBeforeMount(() => {
-  if (authStore.user) {
+  if (authStore.user && authStore.user) {
     router.replace('/')
   }
 })
 
-const form = reactive({ name: '', email: '', password: '', confirmPassword: '' })
+const form = reactive<{
+  name: string
+  email: string
+  password: string
+  confirmPassword: string
+}>({
+  name: '', 
+  email: '',
+  password: '',
+  confirmPassword: '',
+})
 const errors = reactive({ name: '', email: '', password: '', confirmPassword: '' })
 const isLoading = ref(false)
 const authError = ref('')
@@ -195,8 +205,8 @@ function validate(): boolean {
   if (!form.password) {
     errors.password = 'Password is required.'
     valid = false
-  } else if (form.password.length < 6) {
-    errors.password = 'Password must be at least 6 characters.'
+  } else if (form.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters.'
     valid = false
   }
   if (!form.confirmPassword) {
@@ -216,10 +226,12 @@ async function handleSubmit() {
   isLoading.value = true
   try {
     await authStore.register(form.name, form.email, form.password)
-    router.push('/')
+    router.replace('/')
   } catch (err: any) {
-    authError.value = err?.message ?? 'Something went wrong. Please try again.'
-  } finally {
+authError.value =
+  err?.data?.message ||
+  err?.message ||
+  'Something went wrong. Please try again.'  } finally {
     isLoading.value = false
   }
 }
