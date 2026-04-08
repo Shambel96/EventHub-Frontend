@@ -2,7 +2,6 @@ import { useAuthStore } from '../stores/authStore'
 
 export const useApi = () => {
   const baseURL = 'http://localhost:3000'
-
   const $authFetch = async <T>(request: string, options: any = {}) => {
     // Read token fresh on every call — not at composable creation time
     const authStore = useAuthStore()

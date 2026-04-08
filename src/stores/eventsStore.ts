@@ -4,9 +4,10 @@ import { ref, computed } from 'vue'
 import type { Event as AppEvent } from '../types/event'
 import { useApi } from '../composables/useApi'
 import { formatDuration, parseDuration } from '../utils/durationFormatter'
-
+import { useAuthStore } from './authStore'
 export const useEventsStore = defineStore('events', () => {
   const { $authFetch, $fetchNoAuth } = useApi()
+  const authStore = useAuthStore()
 
   const events       = ref<AppEvent[]>([])
   const currentEvent = ref<any>(null)
@@ -14,7 +15,6 @@ export const useEventsStore = defineStore('events', () => {
   const error        = ref<string | null>(null)
   const totalCount   = ref(0)
 
-  // ── Helpers ───────────────────────────────────────────
   function unwrap(response: any) {
     return response?.data ?? response
   }
@@ -53,19 +53,20 @@ export const useEventsStore = defineStore('events', () => {
   }
 
   // ── Fetch single event ────────────────────────────────
-  async function fetchEventById(id: string) {
-    isLoading.value = true
-    error.value = null
-    try {
-      const response = await $fetchNoAuth<any>(`/events/${id}`)
-      currentEvent.value = normalizeEvent(unwrap(response))
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || 'Failed to fetch event'
-    } finally {
-      isLoading.value = false
-    }
+async function fetchEventById(id: string) {
+  isLoading.value = true
+  error.value = null
+  try {
+    const authStore = useAuthStore()
+    const fetch = authStore.token ? $authFetch : $fetchNoAuth
+    const response = await fetch<any>(`/events/${id}`)
+    currentEvent.value = normalizeEvent(unwrap(response))
+  } catch (err: any) {
+    error.value = err?.data?.message || err?.message || 'Failed to fetch event'
+  } finally {
+    isLoading.value = false
   }
-
+}
   // ── Fetch total count ─────────────────────────────────
   async function fetchTotalCount() {
     try {
@@ -186,7 +187,7 @@ export const useEventsStore = defineStore('events', () => {
     }
 
     try {
-      const res  = await $authFetch<any>(`/ratings/${eventId}`, { method: 'POST', body: { score } })
+      const res  = await $authFetch(`/ratings/${eventId}`, { method: 'POST', body: { rating: Math.round(score) } })
       const data = unwrap(res)
       if (target && data?.averageRating != null) {
         target.avgRating    = data.averageRating

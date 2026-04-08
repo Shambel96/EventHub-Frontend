@@ -317,7 +317,7 @@ async function submitComment() {
     await eventsStore.postComment(eventId.value, commentText.value.trim())
     commentText.value = ''
   } catch (err: any) {
-    commentError.value = err.message || 'Failed to post comment.'
+    commentError.value =  'Failed to post comment.'
   } finally {
     commentLoading.value = false
   }
