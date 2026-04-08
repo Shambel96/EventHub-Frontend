@@ -7,7 +7,7 @@
     
     <div v-if="successMessage" class="p-4 mb-6 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm text-center">
       <p class="mb-4">{{ successMessage }}</p>
-      <NuxtLink to="/login">
+      <NuxtLink to="/auth/login">
         <AuthButton variant="primary">Go to Login</AuthButton>
       </NuxtLink>
     </div>

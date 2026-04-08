@@ -101,13 +101,13 @@
             </svg>
           </div>
           <p class="text-sm text-gray-700 font-semibold mb-1">Click or drag images to upload to cloud</p>
-          <p class="text-xs text-gray-500">A simulated upload instantly generates cloud URLs.</p>
+          <p class="text-xs text-gray-500">Images are uploaded after the category and event record are created.</p>
         </div>
         
         <div v-if="form.images.length > 0" class="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
           <div v-for="(img, idx) in form.images" :key="img.id" class="relative group aspect-square bg-gray-100 rounded-xl overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition">
-            <img :src="img.url" class="w-full h-full object-cover" />
-            <button type="button" @click="form.images.splice(idx, 1)" class="absolute top-2 right-2 bg-red-500/90 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition hover:bg-red-600 shadow-md transform hover:scale-110">
+            <img :src="img.previewUrl" class="w-full h-full object-cover" />
+            <button type="button" @click="removeImage(idx)" class="absolute top-2 right-2 bg-red-500/90 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition hover:bg-red-600 shadow-md transform hover:scale-110">
               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -151,6 +151,10 @@
       </section>
 
       <!-- Submit -->
+      <div v-if="submitError" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        {{ submitError }}
+      </div>
+
       <div class="pt-8 flex justify-end">
         <button type="submit" :disabled="isSubmitting" class="bg-gradient-to-r from-brand-blue to-blue-900 text-white font-bold text-lg px-10 py-4 rounded-xl hover:shadow-xl transition-all flex items-center shadow-lg disabled:opacity-70 disabled:cursor-not-allowed transform hover:-translate-y-1">
           <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
@@ -165,13 +169,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { useEventsStore } from '../../stores/eventsStore';
+import { useAuthStore } from '../../stores/auth';
+
+definePageMeta({
+  middleware: 'auth',
+});
+
+interface LocalImageUpload {
+  id: string;
+  file: File;
+  previewUrl: string;
+}
+
+interface EventStepForm {
+  id: string;
+  title: string;
+  description: string;
+}
 
 const router = useRouter();
 const eventsStore = useEventsStore();
+const authStore = useAuthStore();
+const { isAuthenticated } = storeToRefs(authStore);
 const isSubmitting = ref(false);
+const submitError = ref('');
+const canCreateEvents = computed(() => ['OWNER', 'ADMIN'].includes(authStore.user?.role || ''));
 
 const presetCategories = ['Conference', 'Music Festival', 'Tech Workshop', 'Business Networking', 'Live Concert', 'Art Exhibition', 'Local Meetup', 'Online Webinar'];
 const presetAmenities = ['High-Speed WiFi', 'Valet Parking', 'Catered Food & Drinks', 'Wheelchair Accessible', 'VIP Lounge', 'Air Conditioning', 'Coat Check', 'On-site Security', 'ATM Machines', 'First Aid Station'];
@@ -190,8 +216,8 @@ const form = ref({
   location: '',
   startDate: '',
   endDate: '',
-  images: [] as { id: string, url: string }[],
-  steps: [] as { id: string, title: string, description: string }[]
+  images: [] as LocalImageUpload[],
+  steps: [] as EventStepForm[]
 });
 
 const calculateDuration = (begin: string, end: string) => {
@@ -207,16 +233,18 @@ const calculateDuration = (begin: string, end: string) => {
 
 const calculatedDuration = computed(() => calculateDuration(form.value.startDate, form.value.endDate));
 
-const handleFileUpload = async (event: any) => {
-  const files = event.target.files;
+const handleFileUpload = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const files = input.files;
   if (!files || files.length === 0) return;
   
-  // Simulate cloud upload returning URLs
   for (let i = 0; i < files.length; i++) {
     const fakeId = Math.random().toString(36).substring(7);
-    const fakeCloudUrl = URL.createObjectURL(files[i]); 
-    form.value.images.push({ id: fakeId, url: fakeCloudUrl });
+    const previewUrl = URL.createObjectURL(files[i]);
+    form.value.images.push({ id: fakeId, file: files[i], previewUrl });
   }
+
+  input.value = '';
 };
 
 const addStep = () => {
@@ -227,11 +255,65 @@ const addStep = () => {
   });
 };
 
+const removeImage = (index: number) => {
+  const [removed] = form.value.images.splice(index, 1);
+  if (removed) {
+    URL.revokeObjectURL(removed.previewUrl);
+  }
+};
+
+const resetForm = () => {
+  form.value.images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+  form.value = {
+    title: '',
+    description: '',
+    price: 0,
+    location: '',
+    startDate: '',
+    endDate: '',
+    images: [],
+    steps: []
+  };
+  selectedCategory.value = '';
+  customCategory.value = '';
+  selectedAmenities.value = [];
+  isOtherAmenitySelected.value = false;
+  customAmenity.value = '';
+};
+
+onBeforeUnmount(() => {
+  form.value.images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+});
+
 const submitEvent = async () => {
+  submitError.value = '';
+  const finalCategory = selectedCategory.value === 'Other' ? customCategory.value.trim() : selectedCategory.value;
+
+  if (!form.value.startDate || !form.value.endDate || new Date(form.value.endDate) <= new Date(form.value.startDate)) {
+    submitError.value = 'Please choose an end date that comes after the start date.';
+    return;
+  }
+
+  if (!finalCategory) {
+    submitError.value = 'Please choose or enter a category for the event.';
+    return;
+  }
+
+  if (!isAuthenticated.value) {
+    router.push({
+      path: '/auth/login',
+      query: { redirect: '/events/create' }
+    });
+    return;
+  }
+
+  if (!canCreateEvents.value) {
+    submitError.value = 'Your account does not have permission to create events. Please sign in with an owner or admin account.';
+    return;
+  }
+
   isSubmitting.value = true;
-  
-  const finalCategory = selectedCategory.value === 'Other' ? customCategory.value : selectedCategory.value;
-  
+
   const finalAmenities = [...selectedAmenities.value];
   if (isOtherAmenitySelected.value && customAmenity.value) {
     const customs = customAmenity.value.split(',').map(s => s.trim()).filter(Boolean);
@@ -246,17 +328,47 @@ const submitEvent = async () => {
     endDate: new Date(form.value.endDate).toISOString(),
     duration: calculatedDuration.value,
     location: form.value.location,
-    categoryId: finalCategory || 'unspecified',
+    categoryId: finalCategory,
     amenities: finalAmenities,
-    images: form.value.images,
-    steps: form.value.steps
+    steps: form.value.steps.map((step, index) => ({
+      title: step.title,
+      description: step.description,
+      content: step.description,
+      stepOrder: index + 1
+    }))
   };
 
   try {
-    await eventsStore.addEvent(payload as any);
+    const createdEvent = await eventsStore.addEvent(payload as any);
+
+    if (createdEvent?.id && form.value.images.length > 0) {
+      await Promise.all(
+        form.value.images.map((image) => eventsStore.uploadEventImage(createdEvent.id, image.file))
+      );
+    }
+
+    resetForm();
     router.push('/events');
   } catch (e) {
     console.error('Failed to create event', e);
+    const statusCode = (e as any)?.statusCode || (e as any)?.status;
+
+    if (statusCode === 401) {
+      if (isAuthenticated.value) {
+        submitError.value = 'Your account is signed in, but it is not authorized to create events.';
+        return;
+      }
+
+      authStore.logout();
+      submitError.value = 'Your session has expired. Please sign in again to create an event.';
+      router.push({
+        path: '/auth/login',
+        query: { redirect: '/events/create' }
+      });
+      return;
+    }
+
+    submitError.value = e instanceof Error ? e.message : 'Failed to create event. Please try again.';
   } finally {
     isSubmitting.value = false;
   }

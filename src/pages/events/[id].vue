@@ -201,12 +201,12 @@ const getAmenityLabel = (amenity: EventAmenity) => {
   return amenity.amenity?.name || amenitiesStore.getAmenityName(amenity.amenityId);
 };
 
-// Images except the first one (gallery)
+// Images for the gallery
 const galleryImages = computed(() => {
-  if (event.value && event.value.images && event.value.images.length > 1) {
-    return event.value.images.slice(1);
+  if (!event.value || !event.value.images) {
+    return [];
   }
-  return [];
+  return event.value.images.length > 1 ? event.value.images.slice(1) : event.value.images;
 });
 
 // Init store sync if navigated directly via URL

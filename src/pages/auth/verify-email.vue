@@ -16,7 +16,7 @@
           <p class="text-white/70 mb-8">{{ message }}</p>
           
           <NuxtLink 
-            to="/login"
+            to="/auth/login"
             class="block w-full bg-white text-zinc-950 font-semibold py-4 rounded-2xl hover:bg-white/90 transition"
           >
             Go to Login
@@ -38,7 +38,7 @@
               Go Home
             </NuxtLink>
             <NuxtLink 
-              to="/login"
+              to="/auth/login"
               class="flex-1 bg-white text-zinc-950 font-medium py-4 rounded-2xl"
             >
               Go to Login

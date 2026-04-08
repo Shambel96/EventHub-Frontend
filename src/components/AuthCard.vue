@@ -7,7 +7,7 @@
     <div class="orb orb-4" />
 
     <!-- Glass card -->
-    <div class="glass-card">
+    <div :class="['glass-card', { 'glass-card--medium': medium, 'glass-card--wide': wide }]">
       <!-- Brand -->
       <div class="flex items-center gap-2.5 mb-7">
         <div class="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center flex-shrink-0">
@@ -24,6 +24,13 @@
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+withDefaults(defineProps<{ medium?: boolean; wide?: boolean }>(), {
+  medium: false,
+  wide: false,
+})
+</script>
 
 <style scoped>
 .auth-scene {
@@ -106,6 +113,14 @@
     0 8px 32px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   animation: cardIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.glass-card--medium {
+  max-width: 450px;
+}
+
+.glass-card--wide {
+  max-width: 480px;
 }
 
 @keyframes cardIn {
