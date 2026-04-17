@@ -44,8 +44,12 @@
           <ul class="space-y-4 text-gray-300">
             <li><a href="#" class="hover:text-brand-yellow transition-colors">Help Center</a></li>
             <li><a href="#" class="hover:text-brand-yellow transition-colors">Contact Us</a></li>
-            <li><a href="#" class="hover:text-brand-yellow transition-colors">Privacy Policy</a></li>
-            <li><a href="#" class="hover:text-brand-yellow transition-colors">Terms of Service</a></li>
+            <li>
+              <NuxtLink to="/terms-policy" class="hover:text-brand-yellow hover:translate-x-1 inline-block transition-all duration-300">Privacy Policy</NuxtLink>
+            </li>
+            <li>
+              <NuxtLink to="/terms-policy" class="hover:text-brand-yellow hover:translate-x-1 inline-block transition-all duration-300">Terms of Service</NuxtLink>
+            </li>
           </ul>
         </div>
 
@@ -85,6 +89,7 @@ const quickLinks = [
   { name: 'Home', path: '/' },
   { name: 'Discover Events', path: '/events' },
   { name: 'Create Event', path: '/events/create' },
-  { name: 'Your Bookmarks', path: '/bookmarks' }
+  { name: 'Your Bookmarks', path: '/bookmarks' },
+  { name: 'About EventHub', path: '/about' }
 ];
 </script>
