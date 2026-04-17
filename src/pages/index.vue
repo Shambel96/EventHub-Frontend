@@ -26,7 +26,7 @@
     <section class="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
       <div class="text-center mb-16">
         <div class="inline-block px-3 py-1 mb-4 rounded-full bg-brand-yellow/20 text-brand-blue font-bold text-xs tracking-wider uppercase">Trending</div>
-        <h2 class="text-4xl md:text-5xl font-extrabold text-brand-blue mb-4">Discover Top Events</h2>
+        <h2 class="text-4xl md:text-5xl font-extrabold text-brand-blue mb-4">Discover Recent Events</h2>
         <p class="text-lg text-gray-500 max-w-2xl mx-auto">Explore high-rated events curated by our community. Tap into the most vibrant experiences happening right now.</p>
       </div>
 

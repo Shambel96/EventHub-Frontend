@@ -3,36 +3,16 @@ import { ref, computed } from 'vue';
 import type { Event as AppEvent } from '../types/event';
 import { useApi } from '../composables/useApi';
 import { formatDuration, parseDuration } from '../utils/durationFormatter';
+import { extractList } from '../utils/apiHelpers';
 
-const resolveMediaUrl = (baseURL: string, value?: string | null) => {
-  if (!value) return '';
-  if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) return value;
 
-  const normalizedBase = baseURL.replace(/\/$/, '');
-  const normalizedPath = value.startsWith('/') ? value : `/${value}`;
-  return `${normalizedBase}${normalizedPath}`;
-};
-
-const extractList = (response: any) => {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.data?.events)) return response.data.events;
-  if (Array.isArray(response?.data?.items)) return response.data.items;
-  if (Array.isArray(response?.data?.categories)) return response.data.categories;
-  if (Array.isArray(response?.categories)) return response.categories;
-  if (Array.isArray(response?.events)) return response.events;
-  if (Array.isArray(response?.items)) return response.items;
-  return [];
-};
-
-const normalizeEvent = (event: any, baseURL: string): AppEvent => ({
+const normalizeEvent = (event: any, resolveMediaUrl: (path?: string | null) => string): AppEvent => ({
   ...event,
   images: (event.images || []).map((image: any) => ({
     ...image,
-    url: resolveMediaUrl(baseURL, image.url || image.path || image.imageUrl),
+    url: resolveMediaUrl(image.url || image.path || image.imageUrl),
   })),
   featuredImage: resolveMediaUrl(
-    baseURL,
     event.featuredImage || event.featured_image || event.images?.find((img: any) => img.isFeatured)?.url || event.images?.[0]?.url
   ),
   categoryId: event.category?.id || event.categoryId || '',
@@ -53,23 +33,22 @@ const normalizeEvent = (event: any, baseURL: string): AppEvent => ({
 });
 
 export const useEventsStore = defineStore('events', () => {
-  const { $authFetch, $fetchNoAuth } = useApi();
+  const { $authFetch, $fetchNoAuth, resolveMediaUrl, baseURL } = useApi();
   const events = ref<AppEvent[]>([]);
   const isLoading = ref<boolean>(false);
+  const creationStatus = ref<'idle' | 'resolving_category' | 'creating_event' | 'linking_amenities' | 'adding_itinerary' | 'uploading_images' | 'complete'>('idle');
   const error = ref<string | null>(null);
   const totalCount = ref<number>(0);
-  const config = useRuntimeConfig();
-  const baseURL = (config.public.apiBaseURL as string) || 'http://localhost:3344';
 
   const fetchEvents = async () => {
     isLoading.value = true;
     error.value = null;
     try {
-      const response = await $authFetch<any>('/events');
+      const response = await $fetchNoAuth<any>('/events');
       console.log('Events API Response:', response);
 
       const eventsList = extractList(response);
-      events.value = eventsList.map((e: any) => normalizeEvent(e, baseURL));
+      events.value = eventsList.map((e: any) => normalizeEvent(e, resolveMediaUrl));
     } catch (err: any) {
       error.value = err.data?.message || err.message || 'Failed to fetch events';
       console.error('Fetch Events Error:', err);
@@ -80,7 +59,7 @@ export const useEventsStore = defineStore('events', () => {
 
   const fetchTotalCount = async () => {
     try {
-      const data = await $authFetch<any>('/events/count');
+      const data = await $fetchNoAuth<any>('/events/count');
       totalCount.value =
         typeof data === 'number'
           ? data
@@ -97,7 +76,7 @@ export const useEventsStore = defineStore('events', () => {
     }
 
     try {
-      const categoriesResponse = await $authFetch<any>('/categories');
+      const categoriesResponse = await $fetchNoAuth<any>('/categories');
       const categories = extractList(categoriesResponse);
       const existingCategory = categories.find((category: any) =>
         String(category?.name || '').trim().toLowerCase() === normalizedName.toLowerCase()
@@ -128,30 +107,128 @@ export const useEventsStore = defineStore('events', () => {
     return categoryId as string;
   };
 
+  /**
+   * Resolve multiple amenity names to IDs, creating new ones if they don't exist.
+   */
+  const resolveAmenityIds = async (amenityNames: string[]) => {
+    if (!amenityNames || amenityNames.length === 0) return [];
+    
+    // 1. Fetch existing amenities
+    let existingAmenities: any[] = [];
+    try {
+      const response = await $fetchNoAuth<any>('/amenities');
+      existingAmenities = Array.isArray(response) ? response : (response.data || []);
+    } catch (err) {
+      console.warn('Failed to fetch existing amenities', err);
+    }
+
+    // 2. Map names to IDs, creating new ones as we go
+    const resolveResults = await Promise.all(
+      amenityNames.map(async (name) => {
+        const normalized = name.trim();
+        if (!normalized) return null;
+
+        const found = existingAmenities.find(
+          (a) => a.name.toLowerCase() === normalized.toLowerCase()
+        );
+        if (found) return found.id;
+
+        // Create new amenity if not found
+        try {
+          const created = await $authFetch<any>('/amenities', {
+            method: 'POST',
+            body: { name: normalized },
+          });
+          return created?.id || created?.data?.id;
+        } catch (err) {
+          console.error(`Failed to create amenity "${normalized}"`, err);
+          return null;
+        }
+      })
+    );
+
+    return resolveResults.filter(Boolean) as string[];
+  };
+
   const addEvent = async (payload: Partial<AppEvent>) => {
     isLoading.value = true;
+    error.value = null;
+    creationStatus.value = 'resolving_category';
     try {
+      // 1. Resolve Category ID (Already handles creation of new category if needed)
       const categoryId =
         typeof payload.categoryId === 'string' && payload.categoryId.trim()
           ? await resolveCategoryId(payload.categoryId)
           : payload.categoryId;
 
-      const apiPayload = {
-        ...payload,
+      // 2. Resolve Amenity IDs
+      creationStatus.value = 'linking_amenities';
+      const rawAmenities = (payload as any).amenities || [];
+      const amenityIds = Array.isArray(rawAmenities) 
+        ? await resolveAmenityIds(rawAmenities)
+        : [];
+
+      // 3. Create Core Event
+      creationStatus.value = 'creating_event';
+      const corePayload = {
+        title: payload.title,
+        description: payload.description,
+        location: payload.location,
+        isPaid: payload.isPaid || false,
+        price: payload.price,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
         categoryId,
         duration: payload.duration ? parseDuration(payload.duration as string) : 0,
       };
       
-      const newEvent = await $authFetch<AppEvent>('/events', {
+      const newEvent = await $authFetch<any>('/events', {
         method: 'POST',
-        body: apiPayload
+        body: corePayload
       });
+
+      const eventId = newEvent?.id || newEvent?.data?.id;
+      if (!eventId) throw new Error('Failed to retrieve ID for new event.');
+
+      // 4. Link Amenities (POST /amenities/events/{eventId})
+      if (amenityIds.length > 0) {
+        try {
+          await $authFetch(`/amenities/events/${eventId}`, {
+            method: 'POST',
+            body: { amenityIds } // Assuming AddAmenitiesDto takes an array of IDs
+          });
+        } catch (amenityErr) {
+          console.error('Failed to link amenities to event', amenityErr);
+          // We continue because the event itself is created
+        }
+      }
+
+      // 5. Create Steps
+      if (payload.steps && payload.steps.length > 0) {
+        creationStatus.value = 'adding_itinerary';
+        for (const step of payload.steps) {
+          try {
+            await $authFetch(`/events/${eventId}/steps`, {
+              method: 'POST',
+              body: {
+                title: step.title,
+                content: step.content || step.description,
+                stepOrder: step.stepOrder || 1
+              }
+            });
+          } catch (stepErr) {
+            console.error('Failed to create an itinerary step', stepErr);
+          }
+        }
+      }
       
-      const normalizedEvent = normalizeEvent(newEvent, baseURL);
+      creationStatus.value = 'complete';
+      const normalizedEvent = normalizeEvent(newEvent, resolveMediaUrl);
       events.value.unshift(normalizedEvent);
       return newEvent;
     } catch (err: any) {
-      error.value = err.message || 'Failed to add event';
+      creationStatus.value = 'idle';
+      error.value = err.data?.message || err.message || 'Failed to add event';
       throw err;
     } finally {
       isLoading.value = false;
@@ -173,7 +250,7 @@ export const useEventsStore = defineStore('events', () => {
       
       const index = events.value.findIndex(e => e.id === id);
       if (index !== -1) {
-        events.value[index] = normalizeEvent(updated, baseURL);
+        events.value[index] = normalizeEvent(updated, resolveMediaUrl);
       }
     } catch (err: any) {
       error.value = err.message || 'Failed to update event';
@@ -205,16 +282,18 @@ export const useEventsStore = defineStore('events', () => {
     }
   };
 
-  const uploadEventImage = async (eventId: string, file: File) => {
+  const uploadEventImages = async (eventId: string, files: File[]) => {
     const formData = new FormData();
-    formData.append('file', file);
+    files.forEach(file => {
+      formData.append('files', file);
+    });
 
-    const uploadedImage = await $authFetch<any>(`/events/${eventId}/images`, {
+    const response = await $authFetch<any>(`/events/${eventId}/images/upload`, {
       method: 'POST',
       body: formData,
     });
 
-    return uploadedImage;
+    return response;
   };
 
   const toggleLike = async (id: string) => {
@@ -279,6 +358,7 @@ export const useEventsStore = defineStore('events', () => {
     ongoingEvents,
     plannedEvents,
     passedEvents,
+    creationStatus,
     fetchEvents,
     fetchTotalCount,
     resolveCategoryId,
@@ -286,7 +366,7 @@ export const useEventsStore = defineStore('events', () => {
     updateEvent,
     deleteEvent,
     setFeaturedImage,
-    uploadEventImage,
+    uploadEventImages,
     toggleLike,
     toggleBookmark,
     rateEvent

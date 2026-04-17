@@ -29,27 +29,12 @@ interface ProfileUpdatePayload extends Partial<User> {
   password?: string
 }
 
-function resolveMediaUrl(baseURL: string, value?: string) {
-  if (!value) return undefined
-  if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) return value
-
-  const normalizedBase = baseURL.replace(/\/$/, '')
-  const normalizedPath = value.startsWith('/') ? value : `/${value}`
-  return `${normalizedBase}${normalizedPath}`
-}
-
-function normalizeUser(rawUser: User, baseURL: string) {
-  const avatarValue = rawUser.avatar || rawUser.avatarUrl || rawUser.profileImage
-  return {
-    ...rawUser,
-    avatar: resolveMediaUrl(baseURL, avatarValue),
-  }
-}
-
 const TOKEN_KEY = 'auth_token'
 const USER_KEY  = 'auth_user'
 
 export const useAuthStore = defineStore('auth', () => {
+  const { $authFetch, $fetchNoAuth, resolveMediaUrl, baseURL } = useApi();
+  
   const token = ref<string | null>(null)
   const user  = ref<User | null>(null)
 
@@ -57,9 +42,12 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin         = computed(() => user.value?.role === 'ADMIN')
   const isOwner         = computed(() => user.value?.role === 'OWNER')
 
-  function getBaseURL() {
-    const config = useRuntimeConfig()
-    return (config.public.apiBaseURL as string) || 'http://localhost:3344'
+  function normalizeUser(rawUser: User) {
+    const avatarValue = rawUser.avatar || rawUser.avatarUrl || rawUser.profileImage
+    return {
+      ...rawUser,
+      avatar: resolveMediaUrl(avatarValue),
+    }
   }
 
   function hydrate() {
@@ -68,7 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
       const storedUser  = localStorage.getItem(USER_KEY)
       if (storedToken) token.value = storedToken
       if (storedUser)  {
-        try { user.value = normalizeUser(JSON.parse(storedUser), getBaseURL()) } catch {}
+        try { user.value = normalizeUser(JSON.parse(storedUser)) } catch {}
       }
     }
   }
@@ -86,14 +74,14 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(email: string, password: string) {
     const data = await authService.login(email, password)
     token.value = data.token
-    user.value  = normalizeUser(data.user, getBaseURL())
+    user.value  = normalizeUser(data.user)
     persist()
   }
 
   async function register(name: string, email: string, password: string) {
     const data = await authService.register(name, email, password)
     token.value = data.token
-    user.value  = normalizeUser(data.user, getBaseURL())
+    user.value  = normalizeUser(data.user)
     persist()
   }
 
@@ -112,26 +100,14 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return
 
     try {
-      const baseURL = getBaseURL()
-      const response = await $fetch<User | ApiResponse<User>>('/users/me', {
-        baseURL,
-        headers: {
-          Authorization: `Bearer ${token.value}`
-        }
-      })
-
+      const response = await $authFetch<User | ApiResponse<User>>('/users/me')
       const profile = (response as ApiResponse<User>)?.data ?? response
-      user.value = normalizeUser(profile as User, baseURL)
+      user.value = normalizeUser(profile as User)
       persist()
       return user.value
     } catch (err: any) {
       console.error('Profile fetch error:', err)
-
-      if (err?.statusCode === 401 || err?.response?.status === 401) {
-        logout()
-        return null
-      }
-
+      // Note: 401 is handled by $authFetch automatically
       throw err
     }
   }
@@ -140,17 +116,12 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value || !user.value?.id) return null
 
     try {
-      const baseURL = getBaseURL()
-      const response = await $fetch<User | ApiResponse<User>>(`/users/${user.value.id}`, {
+      const response = await $authFetch<User | ApiResponse<User>>(`/users/${user.value.id}`, {
         method: 'PATCH',
-        baseURL,
-        headers: {
-          Authorization: `Bearer ${token.value}`
-        },
         body: updates,
       })
 
-      const updatedProfile = normalizeUser(((response as ApiResponse<User>)?.data ?? response) as User, baseURL)
+      const updatedProfile = normalizeUser(((response as ApiResponse<User>)?.data ?? response) as User)
       user.value = { ...user.value, ...updatedProfile }
       persist()
       return user.value

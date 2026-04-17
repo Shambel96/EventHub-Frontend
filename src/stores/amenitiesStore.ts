@@ -8,14 +8,14 @@ export interface Amenity {
 }
 
 export const useAmenitiesStore = defineStore('amenities', () => {
-  const { $authFetch } = useApi();
+  const { $fetchNoAuth } = useApi();
   const amenities = ref<Amenity[]>([]);
   const isLoaded = ref(false);
 
   const fetchAmenities = async () => {
     if (isLoaded.value) return; // Only fetch once
     try {
-      const response = await $authFetch<any>('/amenities');
+      const response = await $fetchNoAuth<any>('/amenities');
       const list = Array.isArray(response) ? response : (response.data || response.amenities || []);
       amenities.value = list;
       isLoaded.value = true;

@@ -2,28 +2,11 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useApi } from '../composables/useApi';
 import type { User } from '../types/user';
+import { extractList } from '../utils/apiHelpers';
 
-const resolveMediaUrl = (baseURL: string, value?: string | null) => {
-  if (!value) return '';
-  if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) return value;
-
-  const normalizedBase = baseURL.replace(/\/$/, '');
-  const normalizedPath = value.startsWith('/') ? value : `/${value}`;
-  return `${normalizedBase}${normalizedPath}`;
-};
-
-const extractList = (response: any) => {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.data?.users)) return response.data.users;
-  if (Array.isArray(response?.data?.items)) return response.data.items;
-  if (Array.isArray(response?.users)) return response.users;
-  if (Array.isArray(response?.items)) return response.items;
-  return [];
-};
 
 export const useUsersStore = defineStore('users', () => {
-  const { $authFetch } = useApi();
+  const { $authFetch, resolveMediaUrl } = useApi();
   const users = ref<User[]>([]);
   const isLoading = ref<boolean>(false);
   const error = ref<string | null>(null);
@@ -36,12 +19,10 @@ export const useUsersStore = defineStore('users', () => {
       const response = await $authFetch<any>('/users');
       console.log('Users API Response:', response);
 
-      const config = useRuntimeConfig();
-      const baseURL = (config.public.apiBaseURL as string) || 'http://localhost:3344';
       const usersList = extractList(response);
       users.value = usersList.map((u: any) => ({
         ...u,
-        avatar: resolveMediaUrl(baseURL, u.avatar || u.avatarUrl || u.profileImage),
+        avatar: resolveMediaUrl(u.avatar || u.avatarUrl || u.profileImage),
         joinedDate: u.joinedDate || u.createdAt || u.created_at || '',
         role: (u.role || 'user').toLowerCase(),
         status: (u.status || 'active').toLowerCase()
