@@ -18,9 +18,9 @@ const normalizeEvent = (event: any, resolveMediaUrl: (path?: string | null) => s
   categoryId: event.category?.id || event.categoryId || '',
   category: event.category
     ? {
-        id: event.category.id,
-        name: event.category.name,
-      }
+      id: event.category.id,
+      name: event.category.name,
+    }
     : undefined,
   duration: formatDuration(event.duration),
   price: event.price !== null && event.price !== undefined ? parseFloat(event.price) : null,
@@ -112,7 +112,7 @@ export const useEventsStore = defineStore('events', () => {
    */
   const resolveAmenityIds = async (amenityNames: string[]) => {
     if (!amenityNames || amenityNames.length === 0) return [];
-    
+
     // 1. Fetch existing amenities
     let existingAmenities: any[] = [];
     try {
@@ -164,7 +164,7 @@ export const useEventsStore = defineStore('events', () => {
       // 2. Resolve Amenity IDs
       creationStatus.value = 'linking_amenities';
       const rawAmenities = (payload as any).amenities || [];
-      const amenityIds = Array.isArray(rawAmenities) 
+      const amenityIds = Array.isArray(rawAmenities)
         ? await resolveAmenityIds(rawAmenities)
         : [];
 
@@ -181,7 +181,7 @@ export const useEventsStore = defineStore('events', () => {
         categoryId,
         duration: payload.duration ? parseDuration(payload.duration as string) : 0,
       };
-      
+
       const newEvent = await $authFetch<any>('/events', {
         method: 'POST',
         body: corePayload
@@ -221,7 +221,7 @@ export const useEventsStore = defineStore('events', () => {
           }
         }
       }
-      
+
       creationStatus.value = 'complete';
       const normalizedEvent = normalizeEvent(newEvent, resolveMediaUrl);
       events.value.unshift(normalizedEvent);
@@ -242,12 +242,12 @@ export const useEventsStore = defineStore('events', () => {
         ...payload,
         duration: payload.duration ? parseDuration(payload.duration as string) : undefined,
       };
-      
+
       const updated = await $authFetch<AppEvent>(`/events/${id}`, {
         method: 'PATCH',
         body: apiPayload
       });
-      
+
       const index = events.value.findIndex(e => e.id === id);
       if (index !== -1) {
         events.value[index] = normalizeEvent(updated, resolveMediaUrl);
@@ -283,17 +283,56 @@ export const useEventsStore = defineStore('events', () => {
   };
 
   const uploadEventImages = async (eventId: string, files: File[]) => {
-    const formData = new FormData();
-    files.forEach(file => {
-      formData.append('files', file);
-    });
+    const { useAuthStore } = await import('./auth');
+    const authStore = useAuthStore();
+    const results = [];
 
-    const response = await $authFetch<any>(`/events/${eventId}/images/upload`, {
-      method: 'POST',
-      body: formData,
-    });
+    for (const file of files) {
+      // Try common field names: 'image' first, then 'file'
+      const fieldNames = ['image', 'file', 'images'];
+      let uploaded = false;
 
-    return response;
+      for (const fieldName of fieldNames) {
+        const formData = new FormData();
+        formData.append(fieldName, file);
+
+        try {
+          const res = await fetch(`${baseURL}/events/${eventId}/images`, {
+            method: 'POST',
+            headers: {
+              Authorization: authStore.token ? `Bearer ${authStore.token}` : '',
+              // NO Content-Type — browser sets multipart/form-data + boundary automatically
+            },
+            body: formData,
+          });
+
+          if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            results.push(data);
+            console.log(`Image "${file.name}" uploaded successfully with field "${fieldName}"`);
+            uploaded = true;
+            break;
+          } else if (res.status === 400) {
+            const errBody = await res.text().catch(() => '');
+            console.warn(`400 with field "${fieldName}" for "${file.name}": ${errBody}`);
+            // Try next field name
+          } else {
+            const errBody = await res.text().catch(() => '');
+            console.error(`${res.status} with field "${fieldName}": ${errBody}`);
+            break;
+          }
+        } catch (networkErr) {
+          console.error(`Network error uploading "${file.name}" with field "${fieldName}":`, networkErr);
+          break;
+        }
+      }
+
+      if (!uploaded) {
+        console.error(`All field name attempts failed for image "${file.name}"`);
+      }
+    }
+
+    return results;
   };
 
   const toggleLike = async (id: string) => {
