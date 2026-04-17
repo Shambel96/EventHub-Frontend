@@ -17,17 +17,16 @@ export const useApi = () => {
     return `${normalizedBase}${normalizedPath}`;
   };
 
-  /**
-   * Authenticated fetch with automatic token injection and 401 handling.
-   */
   const $authFetch = async <T>(request: string, options: any = {}) => {
     const authStore = useAuthStore();
+    const isFormData = options.body instanceof FormData;
+
     return $fetch<T>(request, {
       baseURL,
       ...options,
       headers: {
         Authorization: authStore.token ? `Bearer ${authStore.token}` : '',
-        ...options.headers,
+        ...(!isFormData ? options.headers : {}),
       },
       onResponseError({ response }) {
         if (response.status === 401) {
@@ -38,9 +37,7 @@ export const useApi = () => {
     });
   };
 
-  /**
-   * Standard fetch without authentication.
-   */
+
   const $fetchNoAuth = async <T>(request: string, options: any = {}) => {
     return $fetch<T>(request, {
       baseURL,
@@ -48,10 +45,10 @@ export const useApi = () => {
     });
   };
 
-  return { 
-    $authFetch, 
-    $fetchNoAuth, 
+  return {
+    $authFetch,
+    $fetchNoAuth,
     baseURL,
-    resolveMediaUrl 
+    resolveMediaUrl
   };
 };
