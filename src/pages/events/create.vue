@@ -7,7 +7,31 @@
       </NuxtLink>
     </div>
 
-    <form @submit.prevent="submitEvent" class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 space-y-8">
+    <form @submit.prevent="submitEvent" class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 space-y-8 relative overflow-hidden">
+      <!-- Submission Overlay / Progress Tracker -->
+      <transition name="fade">
+        <div v-if="isSubmitting" class="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center">
+          <div class="mb-8 relative">
+            <div class="w-24 h-24 border-8 border-gray-100 border-t-brand-blue rounded-full animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <span class="text-brand-blue font-black text-xl">{{ progressPercentage }}%</span>
+            </div>
+          </div>
+          <h3 class="text-2xl font-black text-brand-blue mb-2 tracking-tight">{{ progressTitle }}</h3>
+          <p class="text-gray-500 font-bold uppercase tracking-widest text-xs">{{ progressSubtitle }}</p>
+          
+          <!-- Detailed Steps -->
+          <div class="mt-10 w-full max-w-xs space-y-3">
+             <div v-for="step in progressSteps" :key="step.key" class="flex items-center gap-3 transition-opacity duration-500" :class="[isStepComplete(step.key) ? 'opacity-100' : 'opacity-30']">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" :class="[isStepComplete(step.key) ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400']">
+                  <svg v-if="isStepComplete(step.key)" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                  <span v-else>{{ step.index }}</span>
+                </div>
+                <span class="text-xs font-black uppercase tracking-widest" :class="[isStepComplete(step.key) ? 'text-green-600' : 'text-gray-400']">{{ step.label }}</span>
+             </div>
+          </div>
+        </div>
+      </transition>
       
       <!-- Basic Info -->
       <section>
@@ -74,7 +98,7 @@
           <div class="md:col-span-2">
             <label class="block text-sm font-semibold text-gray-700 mb-3">Amenities Provide check for all that apply</label>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-              <label v-for="amenity in presetAmenities" :key="amenity" class="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded transition">
+              <label v-for="amenity in displayedAmenities" :key="amenity" class="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded transition">
                 <input type="checkbox" :value="amenity" v-model="selectedAmenities" class="rounded border-gray-300 text-brand-blue focus:ring-brand-blue h-4 w-4" />
                 <span>{{ amenity }}</span>
               </label>
@@ -169,11 +193,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { useEventsStore } from '../../stores/eventsStore';
 import { useAuthStore } from '../../stores/auth';
+import { useAmenitiesStore } from '../../stores/amenitiesStore';
+import { useToast } from '../../composables/useToast';
 
 definePageMeta({
   middleware: 'auth',
@@ -194,13 +220,26 @@ interface EventStepForm {
 const router = useRouter();
 const eventsStore = useEventsStore();
 const authStore = useAuthStore();
+const amenitiesStore = useAmenitiesStore();
+const toast = useToast();
+
 const { isAuthenticated } = storeToRefs(authStore);
 const isSubmitting = ref(false);
 const submitError = ref('');
 const canCreateEvents = computed(() => ['OWNER', 'ADMIN'].includes(authStore.user?.role || ''));
 
 const presetCategories = ['Conference', 'Music Festival', 'Tech Workshop', 'Business Networking', 'Live Concert', 'Art Exhibition', 'Local Meetup', 'Online Webinar'];
-const presetAmenities = ['High-Speed WiFi', 'Valet Parking', 'Catered Food & Drinks', 'Wheelchair Accessible', 'VIP Lounge', 'Air Conditioning', 'Coat Check', 'On-site Security', 'ATM Machines', 'First Aid Station'];
+
+const displayedAmenities = computed(() => {
+  const defaultList = [
+    'High-Speed WiFi', 'Valet Parking', 'Catered Food & Drinks', 
+    'Wheelchair Accessible', 'VIP Lounge', 'Air Conditioning'
+  ];
+  
+  // Combine defaults with real amenities from store
+  const fromStore = amenitiesStore.amenities.map(a => a.name);
+  return [...new Set([...defaultList, ...fromStore])];
+});
 
 const selectedCategory = ref('');
 const customCategory = ref('');
@@ -281,34 +320,81 @@ const resetForm = () => {
   customAmenity.value = '';
 };
 
+onMounted(() => {
+  amenitiesStore.fetchAmenities();
+});
+
 onBeforeUnmount(() => {
   form.value.images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
 });
 
+// Progress Tracking Logic
+const progressSteps = [
+  { key: 'resolving_category', label: 'Category Sync', index: 1 },
+  { key: 'creating_event', label: 'Event Creation', index: 2 },
+  { key: 'linking_amenities', label: 'Amenities Link', index: 3 },
+  { key: 'adding_itinerary', label: 'Itinerary Build', index: 4 },
+  { key: 'uploading_images', label: 'Gallery Upload', index: 5 }
+];
+
+const progressTitle = computed(() => {
+  switch (eventsStore.creationStatus) {
+    case 'resolving_category': return 'Syncing Categories';
+    case 'creating_event': return 'Creating Your Event';
+    case 'linking_amenities': return 'Configuring Amenities';
+    case 'adding_itinerary': return 'Building Itinerary';
+    case 'uploading_images': return 'Uploading Gallery';
+    case 'complete': return 'Success!';
+    default: return 'Starting...';
+  }
+});
+
+const progressSubtitle = computed(() => {
+  if (eventsStore.creationStatus === 'complete') return 'Redirecting you now...';
+  return 'Please do not close this window';
+});
+
+const progressPercentage = computed(() => {
+  const keys = ['resolving_category', 'creating_event', 'linking_amenities', 'adding_itinerary', 'uploading_images', 'complete'];
+  const index = keys.indexOf(eventsStore.creationStatus);
+  return Math.round(((index + 1) / keys.length) * 100);
+});
+
+const isStepComplete = (key: string) => {
+  const keys = ['resolving_category', 'creating_event', 'linking_amenities', 'adding_itinerary', 'uploading_images', 'complete'];
+  const currentIndex = keys.indexOf(eventsStore.creationStatus);
+  const stepIndex = keys.indexOf(key);
+  return currentIndex > stepIndex || eventsStore.creationStatus === 'complete';
+};
+
 const submitEvent = async () => {
   submitError.value = '';
-  const finalCategory = selectedCategory.value === 'Other' ? customCategory.value.trim() : selectedCategory.value;
-
+  
+  // Validation
+  if (form.value.price < 0) {
+    toast.error('Price cannot be negative');
+    return;
+  }
+  
   if (!form.value.startDate || !form.value.endDate || new Date(form.value.endDate) <= new Date(form.value.startDate)) {
-    submitError.value = 'Please choose an end date that comes after the start date.';
+    toast.error('Please choose an end date that comes after the start date.');
     return;
   }
 
+  const finalCategory = selectedCategory.value === 'Other' ? customCategory.value.trim() : selectedCategory.value;
   if (!finalCategory) {
-    submitError.value = 'Please choose or enter a category for the event.';
+    toast.error('Please choose or enter a category for the event.');
     return;
   }
 
   if (!isAuthenticated.value) {
-    router.push({
-      path: '/auth/login',
-      query: { redirect: '/events/create' }
-    });
+    toast.info('Session expired. Redirecting to login...');
+    router.push({ path: '/auth/login', query: { redirect: '/events/create' } });
     return;
   }
 
   if (!canCreateEvents.value) {
-    submitError.value = 'Your account does not have permission to create events. Please sign in with an owner or admin account.';
+    toast.error('Permission denied: Account must be an Owner or Admin.');
     return;
   }
 
@@ -324,6 +410,7 @@ const submitEvent = async () => {
     title: form.value.title,
     description: form.value.description,
     price: form.value.price,
+    isPaid: form.value.price > 0,
     startDate: new Date(form.value.startDate).toISOString(),
     endDate: new Date(form.value.endDate).toISOString(),
     duration: calculatedDuration.value,
@@ -342,33 +429,35 @@ const submitEvent = async () => {
     const createdEvent = await eventsStore.addEvent(payload as any);
 
     if (createdEvent?.id && form.value.images.length > 0) {
-      await Promise.all(
-        form.value.images.map((image) => eventsStore.uploadEventImage(createdEvent.id, image.file))
-      );
+      eventsStore.creationStatus = 'uploading_images';
+      try {
+        const imageFiles = form.value.images.map(img => img.file);
+        await eventsStore.uploadEventImages(createdEvent.id, imageFiles);
+      } catch (uploadError) {
+        console.error('Batch image upload failed', uploadError);
+        toast.warning('Gallery upload encountered an issue, but your event was created.');
+      }
     }
 
-    resetForm();
-    router.push('/events');
-  } catch (e) {
+    eventsStore.creationStatus = 'complete';
+    toast.success('Your event has been successfully published!');
+    
+    setTimeout(() => {
+      resetForm();
+      router.push('/events');
+    }, 2000);
+  } catch (e: any) {
     console.error('Failed to create event', e);
-    const statusCode = (e as any)?.statusCode || (e as any)?.status;
+    const statusCode = e?.statusCode || e?.status;
 
     if (statusCode === 401) {
-      if (isAuthenticated.value) {
-        submitError.value = 'Your account is signed in, but it is not authorized to create events.';
-        return;
-      }
-
-      authStore.logout();
-      submitError.value = 'Your session has expired. Please sign in again to create an event.';
-      router.push({
-        path: '/auth/login',
-        query: { redirect: '/events/create' }
-      });
+      toast.error('Unauthorized: Your session may have expired.');
+      router.push({ path: '/auth/login', query: { redirect: '/events/create' } });
       return;
     }
 
-    submitError.value = e instanceof Error ? e.message : 'Failed to create event. Please try again.';
+    submitError.value = e?.data?.message || e?.message || 'Failed to create event.';
+    toast.error(submitError.value as string);
   } finally {
     isSubmitting.value = false;
   }

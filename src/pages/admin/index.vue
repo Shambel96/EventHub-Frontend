@@ -32,7 +32,7 @@
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
           </div>
           <p class="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Total Events</p>
-          <h3 class="text-5xl font-black text-brand-blue">{{ eventsStore.totalCount }}</h3>
+          <h3 class="text-5xl font-black text-brand-blue">{{ statsStore.platformStats.totalEvents || eventsStore.totalCount }}</h3>
         </div>
       </div>
 
@@ -43,7 +43,7 @@
              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
           </div>
           <p class="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Active Users</p>
-          <h3 class="text-5xl font-black text-brand-blue">{{ usersStore.totalCount }}</h3>
+          <h3 class="text-5xl font-black text-brand-blue">{{ statsStore.platformStats.totalUsers || usersStore.totalCount }}</h3>
         </div>
       </div>
 
@@ -53,8 +53,8 @@
           <div class="w-12 h-12 rounded-2xl bg-brand-yellow/10 flex items-center justify-center text-brand-blue mb-6">
              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
           </div>
-          <p class="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Daily Growth</p>
-          <h3 class="text-5xl font-black text-brand-blue">+12%</h3>
+          <p class="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Growth Rate</p>
+          <h3 class="text-5xl font-black text-brand-blue">{{ statsStore.platformStats.growthRate }}%</h3>
         </div>
       </div>
     </div>
@@ -115,9 +115,10 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted } from 'vue';
 import { useEventsStore } from '../../stores/eventsStore';
 import { useUsersStore } from '../../stores/usersStore';
+import { useStatsStore } from '../../stores/statsStore';
 import { useAuthStore } from '../../stores/auth';
 
 definePageMeta({
@@ -126,16 +127,21 @@ definePageMeta({
 
 const eventsStore = useEventsStore();
 const usersStore = useUsersStore();
+const statsStore = useStatsStore();
 const authStore = useAuthStore();
+
+const refreshDashboard = async () => {
+  await Promise.all([
+    statsStore.fetchPlatformStats(),
+    eventsStore.fetchEvents(),
+    eventsStore.fetchTotalCount(),
+    usersStore.fetchUsers()
+  ]);
+};
 
 onMounted(() => {
   console.log('Admin Dashboard Mounted');
-  console.log('API Base URL:', useRuntimeConfig().public.apiBaseURL);
-  console.log('Token Present:', !!authStore.token);
-  
   authStore.fetchProfile();
-  eventsStore.fetchEvents();
-  eventsStore.fetchTotalCount();
-  usersStore.fetchUsers();
+  refreshDashboard();
 });
 </script>
