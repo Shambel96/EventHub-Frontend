@@ -5,7 +5,7 @@ export const useApi = () => {
   const baseURL = (config.public.apiBaseURL as string) || 'http://localhost:3344';
 
   /**
-   * Resolve media URLs by prepending the base URL if needed.
+   * Resolve media URLs by prepending the base URL if needed only.
    */
   const resolveMediaUrl = (path?: string | null) => {
     if (!path) return '';
